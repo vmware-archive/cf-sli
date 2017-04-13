@@ -23,4 +23,11 @@ var _ = Describe("LoadConfig", func() {
 		err := c.LoadConfig("../fixtures/none_existing_config_test.json")
 		Expect(err).To(HaveOccurred())
 	})
+
+	It("returns an error reading a invalid json File", func() {
+		var c config.Config
+		err := c.LoadConfig("../fixtures/invalid_config_test.json")
+		Expect(err).To(HaveOccurred())
+	})
+
 })
