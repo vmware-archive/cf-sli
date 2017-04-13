@@ -3,5 +3,6 @@
   "user": "fake_user",
   "pass": "fake_pass",
   "org": "fake_org",
+  "domain": "fake_domain",
   "space": "fake_space"
 }

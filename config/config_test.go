@@ -13,9 +13,10 @@ var _ = Describe("LoadConfig", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(c.Api).To(Equal("fake_api"))
 		Expect(c.User).To(Equal("fake_user"))
+		Expect(c.Password).To(Equal("fake_pass"))
 		Expect(c.Org).To(Equal("fake_org"))
 		Expect(c.Space).To(Equal("fake_space"))
-		Expect(c.Password).To(Equal("fake_pass"))
+		Expect(c.Domain).To(Equal("fake_domain"))
 	})
 
 	It("returns an error reading a none-existing file", func() {

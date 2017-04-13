@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
@@ -10,6 +11,12 @@ import (
 	gexec "github.com/onsi/gomega/gexec"
 	"github.com/pivotal-cloudops/cf-sli/config"
 )
+
+type Result struct {
+	Route     string `json:"app_route"`
+	StartTime string `json:"app_start_time"`
+	StopTime  string `json:"app_stop_time"`
+}
 
 func wait_for_cf(context *gexec.Session, cf_command string) {
 	_ = <-context.Exited
@@ -43,7 +50,7 @@ func main() {
 
 	app_name := guid.String()[0:20]
 
-	context = cf.Cf("push", "-p", "./assets/ruby_simple", app_name, "--no-start")
+	context = cf.Cf("push", "-p", "./assets/ruby_simple", app_name, "-d", c.Domain, "--no-start")
 	wait_for_cf(context, "push")
 
 	start := time.Now()
@@ -56,7 +63,12 @@ func main() {
 	wait_for_cf(context, "stop")
 	cf_stop_elapsed := time.Since(start)
 
-	fmt.Printf("App route: %s.cfapps.io\n", app_name)
-	fmt.Printf("App start time: %s\n", cf_start_elapsed)
-	fmt.Printf("App stop time: %s\n", cf_stop_elapsed)
+	result := &Result{
+		Route:     app_name + "." + c.Domain,
+		StartTime: cf_start_elapsed.String(),
+		StopTime:  cf_stop_elapsed.String(),
+	}
+
+	output, _ := json.Marshal(result)
+	fmt.Println(string(output))
 }
