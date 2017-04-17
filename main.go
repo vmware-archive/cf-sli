@@ -26,6 +26,13 @@ func wait_for_cf(context *gexec.Session, cf_command string) {
 	}
 }
 
+func clean_up(app_name string) {
+	context := cf.Cf("delete", app_name, "-f")
+	wait_for_cf(context, "delete")
+	context = cf.Cf("logout")
+	wait_for_cf(context, "logout")
+}
+
 func main() {
 	var c config.Config
 	err := c.LoadConfig("./.config")
@@ -50,6 +57,7 @@ func main() {
 
 	app_name := guid.String()[0:20]
 
+	defer clean_up(app_name)
 	context = cf.Cf("push", "-p", "./assets/ruby_simple", app_name, "-d", c.Domain, "--no-start")
 	wait_for_cf(context, "push")
 
