@@ -78,5 +78,5 @@ func main() {
 	}
 
 	output, _ := json.Marshal(result)
-	fmt.Println(string(output))
+	fmt.Fprintf(os.Stderr, string(output))
 }
