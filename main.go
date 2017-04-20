@@ -6,9 +6,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/cloudfoundry-incubator/cf-test-helpers/cf"
 	uuid "github.com/nu7hatch/gouuid"
-	gexec "github.com/onsi/gomega/gexec"
+	"github.com/pivotal-cloudops/cf-sli/cf_wrapper"
 	"github.com/pivotal-cloudops/cf-sli/config"
 )
 
@@ -18,37 +17,41 @@ type Result struct {
 	StopTime  string `json:"app_stop_time"`
 }
 
-func wait_for_cf(context *gexec.Session, cf_command string) {
-	_ = <-context.Exited
-	if context.ExitCode() != 0 {
-		fmt.Println("cf " + cf_command + " failed")
-		os.Exit(1)
+func clean_up(app_name string, wrapper cf_wrapper.CfWrapperInterface) {
+	err := wrapper.RunCF("delete", app_name, "-f")
+	if err != nil {
+		panic(err)
 	}
-}
-
-func clean_up(app_name string) {
-	context := cf.Cf("delete", app_name, "-f")
-	wait_for_cf(context, "delete")
-	context = cf.Cf("logout")
-	wait_for_cf(context, "logout")
+	err = wrapper.RunCF("logout")
+	if err != nil {
+		panic(err)
+	}
 }
 
 func main() {
 	var c config.Config
+	var wrapper *cf_wrapper.CfWrapper
+
 	err := c.LoadConfig("./.config")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	context := cf.Cf("api", c.Api)
-	wait_for_cf(context, "api")
+	err = wrapper.RunCF("api", c.Api)
+	if err != nil {
+		panic(err)
+	}
 
-	context = cf.Cf("auth", c.User, c.Password)
-	wait_for_cf(context, "auth")
+	err = wrapper.RunCF("auth", c.User, c.Password)
+	if err != nil {
+		panic(err)
+	}
 
-	context = cf.Cf("target", "-o", c.Org, "-s", c.Space)
-	wait_for_cf(context, "target")
+	err = wrapper.RunCF("target", "-o", c.Org, "-s", c.Space)
+	if err != nil {
+		panic(err)
+	}
 
 	guid, err := uuid.NewV4()
 	if err != nil {
@@ -57,18 +60,26 @@ func main() {
 
 	app_name := guid.String()[0:20]
 
-	defer clean_up(app_name)
-	context = cf.Cf("push", "-p", "./assets/ruby_simple", app_name, "-d", c.Domain, "--no-start")
-	wait_for_cf(context, "push")
+	defer clean_up(app_name, wrapper)
+	err = wrapper.RunCF("push", "-p", "./assets/ruby_simple", app_name, "-d", c.Domain, "--no-start")
+	if err != nil {
+		panic(err)
+	}
 
 	start := time.Now()
-	context = cf.Cf("start", app_name)
-	wait_for_cf(context, "start")
+	err = wrapper.RunCF("start", app_name)
+	if err != nil {
+		panic(err)
+	}
+
 	cf_start_elapsed := time.Since(start)
 
 	start = time.Now()
-	context = cf.Cf("stop", app_name)
-	wait_for_cf(context, "stop")
+	err = wrapper.RunCF("stop", app_name)
+	if err != nil {
+		panic(err)
+	}
+
 	cf_stop_elapsed := time.Since(start)
 
 	result := &Result{
