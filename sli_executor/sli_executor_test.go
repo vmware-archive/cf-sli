@@ -99,4 +99,31 @@ var _ = Describe("SliExecutor", func() {
 		})
 
 	})
+
+	Context("#CleanupSli", func() {
+
+		It("delete the Sli app and logs out", func() {
+			err := sli.CleanupSli("fake_app_name")
+			Expect(err).NotTo(HaveOccurred())
+			expected_delete_calls := []string{"delete", "fake_app_name", "-f"}
+			Expect(fakeCf.RunCFArgsForCall(0)).To(Equal(expected_delete_calls))
+			expected_logout_calls := []string{"logout"}
+			Expect(fakeCf.RunCFArgsForCall(1)).To(Equal(expected_logout_calls))
+		})
+
+		It("Returns error when cf delete fails, and it logs out", func() {
+			fakeCf.StubFailingCF("delete")
+			err := sli.CleanupSli("fake_app_name")
+			Expect(err).To(HaveOccurred())
+			expected_logout_calls := []string{"logout"}
+			Expect(fakeCf.RunCFArgsForCall(1)).To(Equal(expected_logout_calls))
+		})
+
+		It("Returns error when cf logout fails", func() {
+			fakeCf.StubFailingCF("logout")
+			err := sli.CleanupSli("fake_app_name")
+			Expect(err).To(HaveOccurred())
+		})
+
+	})
 })

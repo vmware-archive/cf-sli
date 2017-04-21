@@ -61,3 +61,17 @@ func (s *SliExecutor) StopSli(app_name string) (time.Duration, error) {
 	time_elapsed := time.Since(start)
 	return time_elapsed, nil
 }
+
+func (s *SliExecutor) CleanupSli(app_name string) error {
+	err_delete := s.cf("delete", app_name, "-f")
+	err_logout := s.cf("logout")
+
+	if err_delete != nil || err_logout != nil {
+		if err_delete != nil {
+			return err_delete
+		}
+		return err_logout
+	}
+
+	return nil
+}
