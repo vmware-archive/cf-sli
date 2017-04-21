@@ -1,4 +1,4 @@
-package cf_wrapper_test
+package sli_executor_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestCfWrapper(t *testing.T) {
+func TestSliExecutor(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "CfWrapper Suite")
+	RunSpecs(t, "SliExecutor Suite")
 }

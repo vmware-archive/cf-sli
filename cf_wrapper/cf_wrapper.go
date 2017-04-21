@@ -1,26 +1,17 @@
 package cf_wrapper
 
 import (
-	"errors"
-	"strings"
-
 	"github.com/cloudfoundry-incubator/cf-test-helpers/cf"
+	"github.com/onsi/gomega/gexec"
 )
 
 type CfWrapperInterface interface {
-	RunCF(commands ...string) error
+	RunCF(commands ...string) *gexec.Session
 }
 
 type CfWrapper struct {
 }
 
-func (h *CfWrapper) RunCF(commands ...string) error {
-	context := cf.Cf(commands...)
-	_ = <-context.Exited
-	if context.ExitCode() != 0 {
-		error_message := "Running CF command failed: "
-		error_message += strings.Join(commands, " ")
-		return errors.New(error_message)
-	}
-	return nil
+func (h *CfWrapper) RunCF(commands ...string) *gexec.Session {
+	return cf.Cf(commands...)
 }
