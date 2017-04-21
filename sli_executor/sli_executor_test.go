@@ -50,16 +50,16 @@ var _ = Describe("SliExecutor", func() {
 		})
 	})
 
-	Context("#PushSli", func() {
+	Context("#PushAndStartSli", func() {
 		It("Push the Sli app with --no-start", func() {
-			_, err := sli.PushSli("fake_app_name", "fake_domain", "./fake_path")
+			_, err := sli.PushAndStartSli("fake_app_name", "fake_domain", "./fake_path")
 			Expect(err).NotTo(HaveOccurred())
 			expected_push_calls := []string{"push", "-p", "./fake_path", "fake_app_name", "-d", "fake_domain", "--no-start"}
 			Expect(fakeCf.RunCFArgsForCall(0)).To(Equal(expected_push_calls))
 		})
 
 		It("Runs cf start and returns how long it takes", func() {
-			elapsed_time, err := sli.PushSli("fake_app_name", "fake_domain", "./fake_path")
+			elapsed_time, err := sli.PushAndStartSli("fake_app_name", "fake_domain", "./fake_path")
 			Expect(err).NotTo(HaveOccurred())
 			expected_start_calls := []string{"start", "fake_app_name"}
 			Expect(fakeCf.RunCFArgsForCall(1)).To(Equal(expected_start_calls))
@@ -68,16 +68,35 @@ var _ = Describe("SliExecutor", func() {
 
 		It("Returns error when cf push fails", func() {
 			fakeCf.StubFailingCF("push")
-			elapsed_time, err := sli.PushSli("fake_app_name", "fake_domain", "./fake_path")
+			elapsed_time, err := sli.PushAndStartSli("fake_app_name", "fake_domain", "./fake_path")
 			Expect(err).To(HaveOccurred())
 			Expect(elapsed_time).To(Equal(time.Duration(0)))
 		})
 
 		It("Returns error when cf start fails", func() {
 			fakeCf.StubFailingCF("start")
-			elapsed_time, err := sli.PushSli("fake_app_name", "fake_domain", "./fake_path")
+			elapsed_time, err := sli.PushAndStartSli("fake_app_name", "fake_domain", "./fake_path")
 			Expect(err).To(HaveOccurred())
 			Expect(elapsed_time).To(Equal(time.Duration(0)))
 		})
+	})
+
+	Context("#StopSli", func() {
+
+		It("Start the Sli app", func() {
+			elapsed_time, err := sli.StopSli("fake_app_name")
+			Expect(err).NotTo(HaveOccurred())
+			expected_stop_calls := []string{"stop", "fake_app_name"}
+			Expect(fakeCf.RunCFArgsForCall(0)).To(Equal(expected_stop_calls))
+			Expect(elapsed_time).ToNot(Equal(time.Duration(0)))
+		})
+
+		It("Returns error when cf stop fails", func() {
+			fakeCf.StubFailingCF("stop")
+			elapsed_time, err := sli.StopSli("fake_app_name")
+			Expect(err).To(HaveOccurred())
+			Expect(elapsed_time).To(Equal(time.Duration(0)))
+		})
+
 	})
 })

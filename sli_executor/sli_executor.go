@@ -36,7 +36,7 @@ func (s *SliExecutor) Prepare(api string, user string, password string, org stri
 	return nil
 }
 
-func (s *SliExecutor) PushSli(app_name string, domain string, path string) (time.Duration, error) {
+func (s *SliExecutor) PushAndStartSli(app_name string, domain string, path string) (time.Duration, error) {
 	err := s.cf("push", "-p", path, app_name, "-d", domain, "--no-start")
 	if err != nil {
 		return time.Duration(0), err
@@ -48,6 +48,16 @@ func (s *SliExecutor) PushSli(app_name string, domain string, path string) (time
 		return time.Duration(0), err
 	}
 
+	time_elapsed := time.Since(start)
+	return time_elapsed, nil
+}
+
+func (s *SliExecutor) StopSli(app_name string) (time.Duration, error) {
+	start := time.Now()
+	err := s.cf("stop", app_name)
+	if err != nil {
+		return time.Duration(0), err
+	}
 	time_elapsed := time.Since(start)
 	return time_elapsed, nil
 }
