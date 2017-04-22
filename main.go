@@ -4,51 +4,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"time"
 
 	uuid "github.com/nu7hatch/gouuid"
 	"github.com/pivotal-cloudops/cf-sli/cf_wrapper"
 	"github.com/pivotal-cloudops/cf-sli/config"
+	"github.com/pivotal-cloudops/cf-sli/sli_executor"
 )
 
-type Result struct {
+type Output struct {
 	Route     string `json:"app_route"`
 	StartTime string `json:"app_start_time"`
 	StopTime  string `json:"app_stop_time"`
 }
 
-func clean_up(app_name string, wrapper cf_wrapper.CfWrapperInterface) {
-	err := wrapper.RunCF("delete", app_name, "-f")
-	if err != nil {
-		panic(err)
-	}
-	err = wrapper.RunCF("logout")
-	if err != nil {
-		panic(err)
-	}
-}
-
 func main() {
-	var c config.Config
-	var wrapper *cf_wrapper.CfWrapper
+	var config config.Config
+	var cf_cli cf_wrapper.CfWrapper
 
-	err := c.LoadConfig("./.config")
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	err = wrapper.RunCF("api", c.Api)
-	if err != nil {
-		panic(err)
-	}
-
-	err = wrapper.RunCF("auth", c.User, c.Password)
-	if err != nil {
-		panic(err)
-	}
-
-	err = wrapper.RunCF("target", "-o", c.Org, "-s", c.Space)
+	err := config.LoadConfig("./.config")
 	if err != nil {
 		panic(err)
 	}
@@ -60,34 +33,22 @@ func main() {
 
 	app_name := guid.String()[0:20]
 
-	defer clean_up(app_name, wrapper)
-	err = wrapper.RunCF("push", "-p", "./assets/ruby_simple", app_name, "-d", c.Domain, "--no-start")
+	sli_executor := sli_executor.NewSliExecutor(cf_cli)
+	result, err := sli_executor.RunTest(app_name, "./assets/ruby_simple", config)
 	if err != nil {
 		panic(err)
 	}
 
-	start := time.Now()
-	err = wrapper.RunCF("start", app_name)
+	output := &Output{
+		Route:     app_name + "." + config.Domain,
+		StartTime: result.StartTime.String(),
+		StopTime:  result.StopTime.String(),
+	}
+
+	json_output, err := json.Marshal(output)
 	if err != nil {
 		panic(err)
 	}
 
-	cf_start_elapsed := time.Since(start)
-
-	start = time.Now()
-	err = wrapper.RunCF("stop", app_name)
-	if err != nil {
-		panic(err)
-	}
-
-	cf_stop_elapsed := time.Since(start)
-
-	result := &Result{
-		Route:     app_name + "." + c.Domain,
-		StartTime: cf_start_elapsed.String(),
-		StopTime:  cf_stop_elapsed.String(),
-	}
-
-	output, _ := json.Marshal(result)
-	fmt.Fprintf(os.Stderr, string(output))
+	fmt.Fprintf(os.Stderr, string(json_output))
 }
