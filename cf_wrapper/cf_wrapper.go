@@ -14,7 +14,7 @@ type CfWrapperInterface interface {
 type CfWrapper struct {
 }
 
-func (h *CfWrapper) RunCF(commands ...string) error {
+func (h CfWrapper) RunCF(commands ...string) error {
 	context := cf.Cf(commands...)
 	_ = <-context.Exited
 	if context.ExitCode() != 0 {
