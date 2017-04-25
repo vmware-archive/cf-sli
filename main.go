@@ -50,5 +50,5 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Fprintf(os.Stderr, string(json_output))
+	fmt.Fprintf(os.Stdout, string(json_output))
 }
