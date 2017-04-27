@@ -18,17 +18,17 @@ type Result struct {
 	StopStatus  int
 }
 
-func NewSliExecutor(cf_wrapper cf_wrapper.CfWrapperInterface) *SliExecutor {
-	return &SliExecutor{
+func NewSliExecutor(cf_wrapper cf_wrapper.CfWrapperInterface) SliExecutor {
+	return SliExecutor{
 		Cf_wrapper: cf_wrapper,
 	}
 }
 
-func (s *SliExecutor) cf(commands ...string) error {
+func (s SliExecutor) cf(commands ...string) error {
 	return s.Cf_wrapper.RunCF(commands...)
 }
 
-func (s *SliExecutor) Prepare(api string, user string, password string, org string, space string) error {
+func (s SliExecutor) Prepare(api string, user string, password string, org string, space string) error {
 	err := s.cf("api", api)
 	if err != nil {
 		return err
@@ -44,7 +44,7 @@ func (s *SliExecutor) Prepare(api string, user string, password string, org stri
 	return nil
 }
 
-func (s *SliExecutor) PushAndStartSli(app_name string, domain string, path string) (time.Duration, error) {
+func (s SliExecutor) PushAndStartSli(app_name string, domain string, path string) (time.Duration, error) {
 	err := s.cf("push", "-p", path, app_name, "-d", domain, "--no-start")
 	if err != nil {
 		return time.Duration(0), err
@@ -60,7 +60,7 @@ func (s *SliExecutor) PushAndStartSli(app_name string, domain string, path strin
 	return time_elapsed, nil
 }
 
-func (s *SliExecutor) StopSli(app_name string) (time.Duration, error) {
+func (s SliExecutor) StopSli(app_name string) (time.Duration, error) {
 	start := time.Now()
 	err := s.cf("stop", app_name)
 	if err != nil {
@@ -70,7 +70,7 @@ func (s *SliExecutor) StopSli(app_name string) (time.Duration, error) {
 	return time_elapsed, nil
 }
 
-func (s *SliExecutor) CleanupSli(app_name string) error {
+func (s SliExecutor) CleanupSli(app_name string) error {
 	err_delete := s.cf("delete", app_name, "-f")
 	err_logout := s.cf("logout")
 
@@ -84,7 +84,7 @@ func (s *SliExecutor) CleanupSli(app_name string) error {
 	return nil
 }
 
-func (s *SliExecutor) RunTest(app_name string, path string, c config.Config) (*Result, error) {
+func (s SliExecutor) RunTest(app_name string, path string, c config.Config) (*Result, error) {
 	err := s.Prepare(c.Api, c.User, c.Password, c.Org, c.Space)
 
 	if err != nil {

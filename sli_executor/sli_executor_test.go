@@ -13,7 +13,7 @@ import (
 var _ = Describe("SliExecutor", func() {
 	var (
 		fakeCf *cf_wrapperfakes.FakeCfWrapperInterface
-		sli    *sli_executor.SliExecutor
+		sli    sli_executor.SliExecutor
 		config config.Config
 	)
 	BeforeEach(func() {
