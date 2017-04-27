@@ -55,9 +55,9 @@ var _ = Describe("SliExecutor", func() {
 
 	Context("#PushAndStartSli", func() {
 		It("Push the Sli app with --no-start and starts it", func() {
-			elapsed_time, err := sli.PushAndStartSli("fake_app_name", "fake_domain", "./fake_path")
+			elapsed_time, err := sli.PushAndStartSli("fake_app_name", "fake_buildpack", "fake_domain", "./fake_path")
 			Expect(err).NotTo(HaveOccurred())
-			expected_push_calls := []string{"push", "-p", "./fake_path", "fake_app_name", "-d", "fake_domain", "--no-start"}
+			expected_push_calls := []string{"push", "-p", "./fake_path", "-b", "fake_buildpack", "fake_app_name", "-d", "fake_domain", "--no-start"}
 			Expect(fakeCf.RunCFArgsForCall(0)).To(Equal(expected_push_calls))
 			expected_start_calls := []string{"start", "fake_app_name"}
 			Expect(fakeCf.RunCFArgsForCall(1)).To(Equal(expected_start_calls))
@@ -66,14 +66,14 @@ var _ = Describe("SliExecutor", func() {
 
 		It("Returns error when cf push fails", func() {
 			fakeCf.StubFailingCF("push")
-			elapsed_time, err := sli.PushAndStartSli("fake_app_name", "fake_domain", "./fake_path")
+			elapsed_time, err := sli.PushAndStartSli("fake_app_name", "fake_buildpack", "fake_domain", "./fake_path")
 			Expect(err).To(HaveOccurred())
 			Expect(elapsed_time).To(Equal(time.Duration(0)))
 		})
 
 		It("Returns error when cf start fails", func() {
 			fakeCf.StubFailingCF("start")
-			elapsed_time, err := sli.PushAndStartSli("fake_app_name", "fake_domain", "./fake_path")
+			elapsed_time, err := sli.PushAndStartSli("fake_app_name", "fake_buildpack", "fake_domain", "./fake_path")
 			Expect(err).To(HaveOccurred())
 			Expect(elapsed_time).To(Equal(time.Duration(0)))
 		})
@@ -123,7 +123,7 @@ var _ = Describe("SliExecutor", func() {
 
 	Context("#RunTest", func() {
 		It("Login, push the app, returns the start and stop times and status, and cleanup", func() {
-			result, err := sli.RunTest("fake_app_name", "./fake_app_path", config)
+			result, err := sli.RunTest("fake_app_name", "fake_buildpack", "./fake_app_path", config)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Login and target to the org and space
@@ -135,7 +135,7 @@ var _ = Describe("SliExecutor", func() {
 			Expect(fakeCf.RunCFArgsForCall(2)).To(Equal(expected_target_calls))
 
 			// Push, start, and stop the app
-			expected_push_calls := []string{"push", "-p", "./fake_app_path", "fake_app_name", "-d", "fake_domain", "--no-start"}
+			expected_push_calls := []string{"push", "-p", "./fake_app_path", "-b", "fake_buildpack", "fake_app_name", "-d", "fake_domain", "--no-start"}
 			Expect(fakeCf.RunCFArgsForCall(3)).To(Equal(expected_push_calls))
 			expected_start_calls := []string{"start", "fake_app_name"}
 			Expect(fakeCf.RunCFArgsForCall(4)).To(Equal(expected_start_calls))
@@ -156,7 +156,7 @@ var _ = Describe("SliExecutor", func() {
 		It("Cleans up the app if push fails", func() {
 
 			fakeCf.StubFailingCF("push")
-			result, err := sli.RunTest("fake_app_name", "./fake_app_path", config)
+			result, err := sli.RunTest("fake_app_name", "fake_buildpack", "./fake_app_path", config)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Login and target to the org and space
@@ -183,7 +183,7 @@ var _ = Describe("SliExecutor", func() {
 
 		It("Cleans up the app if stop fails", func() {
 			fakeCf.StubFailingCF("stop")
-			result, err := sli.RunTest("fake_app_name", "./fake_app_path", config)
+			result, err := sli.RunTest("fake_app_name", "fake_buildpack", "./fake_app_path", config)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Login and target to the org and space
@@ -195,7 +195,7 @@ var _ = Describe("SliExecutor", func() {
 			Expect(fakeCf.RunCFArgsForCall(2)).To(Equal(expected_target_calls))
 
 			// Push and start app
-			expected_push_calls := []string{"push", "-p", "./fake_app_path", "fake_app_name", "-d", "fake_domain", "--no-start"}
+			expected_push_calls := []string{"push", "-p", "./fake_app_path", "-b", "fake_buildpack", "fake_app_name", "-d", "fake_domain", "--no-start"}
 			Expect(fakeCf.RunCFArgsForCall(3)).To(Equal(expected_push_calls))
 			expected_start_calls := []string{"start", "fake_app_name"}
 			Expect(fakeCf.RunCFArgsForCall(4)).To(Equal(expected_start_calls))
