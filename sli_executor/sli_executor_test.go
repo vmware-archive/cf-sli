@@ -122,7 +122,7 @@ var _ = Describe("SliExecutor", func() {
 	})
 
 	Context("#RunTest", func() {
-		It("Login, push the app, returns the start time and stop time, and cleanup", func() {
+		It("Login, push the app, returns the start and stop times and status, and cleanup", func() {
 			result, err := sli.RunTest("fake_app_name", "./fake_app_path", config)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -143,6 +143,8 @@ var _ = Describe("SliExecutor", func() {
 			Expect(fakeCf.RunCFArgsForCall(5)).To(Equal(expected_stop_calls))
 			Expect(result.StartTime).ToNot(Equal(0))
 			Expect(result.StopTime).ToNot(Equal(0))
+			Expect(result.StartStatus).To(Equal(1))
+			Expect(result.StopStatus).To(Equal(1))
 
 			// Cleanup and logout
 			expected_delete_calls := []string{"delete", "fake_app_name", "-f"}
@@ -155,7 +157,7 @@ var _ = Describe("SliExecutor", func() {
 
 			fakeCf.StubFailingCF("push")
 			result, err := sli.RunTest("fake_app_name", "./fake_app_path", config)
-			Expect(err).To(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 
 			// Login and target to the org and space
 			expected_api_calls := []string{"api", "fake_api"}
@@ -175,12 +177,14 @@ var _ = Describe("SliExecutor", func() {
 
 			Expect(result.StartTime).To(Equal(time.Duration(0)))
 			Expect(result.StopTime).To(Equal(time.Duration(0)))
+			Expect(result.StartStatus).To(Equal(0))
+			Expect(result.StopStatus).To(Equal(0))
 		})
 
 		It("Cleans up the app if stop fails", func() {
 			fakeCf.StubFailingCF("stop")
 			result, err := sli.RunTest("fake_app_name", "./fake_app_path", config)
-			Expect(err).To(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 
 			// Login and target to the org and space
 			expected_api_calls := []string{"api", "fake_api"}
@@ -203,8 +207,10 @@ var _ = Describe("SliExecutor", func() {
 			expected_logout_calls := []string{"logout"}
 			Expect(fakeCf.RunCFArgsForCall(7)).To(Equal(expected_logout_calls))
 
-			Expect(result.StartTime).To(Equal(time.Duration(0)))
+			Expect(result.StartTime).ToNot(Equal(time.Duration(0)))
 			Expect(result.StopTime).To(Equal(time.Duration(0)))
+			Expect(result.StartStatus).To(Equal(1))
+			Expect(result.StopStatus).To(Equal(0))
 		})
 	})
 })

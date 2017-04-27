@@ -12,8 +12,10 @@ type SliExecutor struct {
 }
 
 type Result struct {
-	StartTime time.Duration
-	StopTime  time.Duration
+	StartTime   time.Duration
+	StopTime    time.Duration
+	StartStatus int
+	StopStatus  int
 }
 
 func NewSliExecutor(cf_wrapper cf_wrapper.CfWrapperInterface) *SliExecutor {
@@ -84,24 +86,40 @@ func (s *SliExecutor) CleanupSli(app_name string) error {
 
 func (s *SliExecutor) RunTest(app_name string, path string, c config.Config) (*Result, error) {
 	err := s.Prepare(c.Api, c.User, c.Password, c.Org, c.Space)
+
 	if err != nil {
-		return &Result{}, err
+		result := &Result{
+			StartStatus: 0,
+			StopStatus:  0,
+		}
+		return result, nil
 	}
 
 	defer s.CleanupSli(app_name)
 	elapsed_start_time, err := s.PushAndStartSli(app_name, c.Domain, path)
 	if err != nil {
-		return &Result{}, err
+		result := &Result{
+			StartStatus: 0,
+			StopStatus:  0,
+		}
+		return result, nil
 	}
 
 	elapsed_stop_time, err := s.StopSli(app_name)
 	if err != nil {
-		return &Result{}, err
+		result := &Result{
+			StartTime:   elapsed_start_time,
+			StartStatus: 1,
+			StopStatus:  0,
+		}
+		return result, nil
 	}
 
 	result := &Result{
-		StartTime: elapsed_start_time,
-		StopTime:  elapsed_stop_time,
+		StartTime:   elapsed_start_time,
+		StopTime:    elapsed_stop_time,
+		StartStatus: 1,
+		StopStatus:  1,
 	}
 	return result, nil
 }

@@ -12,9 +12,11 @@ import (
 )
 
 type Output struct {
-	Route     string  `json:"app_route"`
-	StartTime float64 `json:"app_start_time_in_sec"`
-	StopTime  float64 `json:"app_stop_time_in_sec"`
+	Route       string  `json:"app_route"`
+	StartTime   float64 `json:"app_start_time_in_sec"`
+	StopTime    float64 `json:"app_stop_time_in_sec"`
+	StartStatus int     `json:"app_start_status"`
+	StopStatus  int     `json:"app_stop_status"`
 }
 
 func main() {
@@ -40,9 +42,11 @@ func main() {
 	}
 
 	output := &Output{
-		Route:     app_name + "." + config.Domain,
-		StartTime: result.StartTime.Seconds(),
-		StopTime:  result.StopTime.Seconds(),
+		Route:       app_name + "." + config.Domain,
+		StartTime:   result.StartTime.Seconds(),
+		StopTime:    result.StopTime.Seconds(),
+		StartStatus: result.StartStatus,
+		StopStatus:  result.StopStatus,
 	}
 
 	json_output, err := json.Marshal(output)
