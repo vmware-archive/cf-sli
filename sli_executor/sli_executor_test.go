@@ -100,7 +100,7 @@ var _ = Describe("SliExecutor", func() {
 		It("delete the Sli app and logs out", func() {
 			err := sli.CleanupSli("fake_app_name")
 			Expect(err).NotTo(HaveOccurred())
-			expected_delete_calls := []string{"delete", "fake_app_name", "-f"}
+			expected_delete_calls := []string{"delete", "fake_app_name", "-f", "-r"}
 			Expect(fakeCf.RunCFArgsForCall(0)).To(Equal(expected_delete_calls))
 			expected_logout_calls := []string{"logout"}
 			Expect(fakeCf.RunCFArgsForCall(1)).To(Equal(expected_logout_calls))
@@ -147,7 +147,7 @@ var _ = Describe("SliExecutor", func() {
 			Expect(result.StopStatus).To(Equal(1))
 
 			// Cleanup and logout
-			expected_delete_calls := []string{"delete", "fake_app_name", "-f"}
+			expected_delete_calls := []string{"delete", "fake_app_name", "-f", "-r"}
 			Expect(fakeCf.RunCFArgsForCall(6)).To(Equal(expected_delete_calls))
 			expected_logout_calls := []string{"logout"}
 			Expect(fakeCf.RunCFArgsForCall(7)).To(Equal(expected_logout_calls))
@@ -170,7 +170,7 @@ var _ = Describe("SliExecutor", func() {
 			// call #3: Push the app will fail
 
 			// Cleanup and logout
-			expected_delete_calls := []string{"delete", "fake_app_name", "-f"}
+			expected_delete_calls := []string{"delete", "fake_app_name", "-f", "-r"}
 			Expect(fakeCf.RunCFArgsForCall(4)).To(Equal(expected_delete_calls))
 			expected_logout_calls := []string{"logout"}
 			Expect(fakeCf.RunCFArgsForCall(5)).To(Equal(expected_logout_calls))
@@ -202,7 +202,7 @@ var _ = Describe("SliExecutor", func() {
 			// call #5: stop the app will fail
 
 			// Cleanup and logout
-			expected_delete_calls := []string{"delete", "fake_app_name", "-f"}
+			expected_delete_calls := []string{"delete", "fake_app_name", "-f", "-r"}
 			Expect(fakeCf.RunCFArgsForCall(6)).To(Equal(expected_delete_calls))
 			expected_logout_calls := []string{"logout"}
 			Expect(fakeCf.RunCFArgsForCall(7)).To(Equal(expected_logout_calls))
