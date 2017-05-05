@@ -25,7 +25,10 @@ func main() {
 
 	err := config.LoadConfig("./.config")
 	if err != nil {
-		panic(err)
+		fmt.Fprint(os.Stderr, "Failed to load .config :\n")
+		fmt.Fprint(os.Stderr, err)
+		fmt.Fprint(os.Stderr, "\n")
+		os.Exit(1)
 	}
 
 	guid, err := uuid.NewV4()
