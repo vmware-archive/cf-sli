@@ -7,8 +7,8 @@ set -eux
 : ${PGHOST:?}
 : ${PGPORT:?}
 
-output=$0
-stats=$(echo -e "$output" | tail -n 1)
+output=$1
+stats=$(echo -e "${output}" | tail -n 1)
 
 psql \
   -U"${PGUSER}" \
@@ -23,7 +23,7 @@ psql \
     entry_time timestamp with time zone
   );"
 
-app_route=$(echo $stats | jq '.app_route')
+app_route=$(echo $stats | jq '.app_route' | sed "s/\"/'/g")
 app_start_time_in_sec=$(echo $stats | jq '.app_start_time_in_sec')
 app_stop_time_in_sec=$(echo $stats | jq '.app_stop_time_in_sec')
 app_start_status=$(echo $stats | jq '.app_start_status')
