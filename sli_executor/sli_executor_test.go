@@ -153,64 +153,95 @@ var _ = Describe("SliExecutor", func() {
 			Expect(fakeCf.RunCFArgsForCall(7)).To(Equal(expected_logout_calls))
 		})
 
-		It("Cleans up the app if push fails", func() {
+		Context("When something in the prepare step fails", func() {
+			It("Cleans up the app", func() {
+				fakeCf.StubFailingCF("api")
+				sli.RunTest("fake_app_name", "fake_buildpack", "./fake_app_path", config)
 
-			fakeCf.StubFailingCF("push")
-			result, err := sli.RunTest("fake_app_name", "fake_buildpack", "./fake_app_path", config)
-			Expect(err).NotTo(HaveOccurred())
+				expected_delete_calls := []string{"delete", "fake_app_name", "-f", "-r"}
+				Expect(fakeCf.RunCFArgsForCall(1)).To(Equal(expected_delete_calls))
+				expected_logout_calls := []string{"logout"}
+				Expect(fakeCf.RunCFArgsForCall(2)).To(Equal(expected_logout_calls))
+			})
 
-			// Login and target to the org and space
-			expected_api_calls := []string{"api", "fake_api"}
-			Expect(fakeCf.RunCFArgsForCall(0)).To(Equal(expected_api_calls))
-			expected_auth_calls := []string{"auth", "fake_user", "fake_pass"}
-			Expect(fakeCf.RunCFArgsForCall(1)).To(Equal(expected_auth_calls))
-			expected_target_calls := []string{"target", "-o", "fake_org", "-s", "fake_space"}
-			Expect(fakeCf.RunCFArgsForCall(2)).To(Equal(expected_target_calls))
+			It("Returns an error from CF", func() {
+				fakeCf.StubFailingCF("auth")
+				_, err := sli.RunTest("fake_app_name", "fake_buildpack", "./fake_app_path", config)
 
-			// call #3: Push the app will fail
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("Running CF command failed:"))
+			})
 
-			// Cleanup and logout
-			expected_delete_calls := []string{"delete", "fake_app_name", "-f", "-r"}
-			Expect(fakeCf.RunCFArgsForCall(4)).To(Equal(expected_delete_calls))
-			expected_logout_calls := []string{"logout"}
-			Expect(fakeCf.RunCFArgsForCall(5)).To(Equal(expected_logout_calls))
+			It("Does not record time and status", func() {
+				fakeCf.StubFailingCF("target")
+				result, _ := sli.RunTest("fake_app_name", "fake_buildpack", "./fake_app_path", config)
 
-			Expect(result.StartTime).To(Equal(time.Duration(0)))
-			Expect(result.StopTime).To(Equal(time.Duration(0)))
-			Expect(result.StartStatus).To(Equal(0))
-			Expect(result.StopStatus).To(Equal(0))
+				Expect(result.StartTime).To(Equal(time.Duration(0)))
+				Expect(result.StopTime).To(Equal(time.Duration(0)))
+				Expect(result.StartStatus).To(Equal(0))
+				Expect(result.StopStatus).To(Equal(0))
+			})
 		})
 
-		It("Cleans up the app if stop fails", func() {
-			fakeCf.StubFailingCF("stop")
-			result, err := sli.RunTest("fake_app_name", "fake_buildpack", "./fake_app_path", config)
-			Expect(err).NotTo(HaveOccurred())
+		Context("When push/start fails", func() {
+			It("Cleans up the app", func() {
+				fakeCf.StubFailingCF("push")
+				sli.RunTest("fake_app_name", "fake_buildpack", "./fake_app_path", config)
 
-			// Login and target to the org and space
-			expected_api_calls := []string{"api", "fake_api"}
-			Expect(fakeCf.RunCFArgsForCall(0)).To(Equal(expected_api_calls))
-			expected_auth_calls := []string{"auth", "fake_user", "fake_pass"}
-			Expect(fakeCf.RunCFArgsForCall(1)).To(Equal(expected_auth_calls))
-			expected_target_calls := []string{"target", "-o", "fake_org", "-s", "fake_space"}
-			Expect(fakeCf.RunCFArgsForCall(2)).To(Equal(expected_target_calls))
+				expected_delete_calls := []string{"delete", "fake_app_name", "-f", "-r"}
+				Expect(fakeCf.RunCFArgsForCall(4)).To(Equal(expected_delete_calls))
+				expected_logout_calls := []string{"logout"}
+				Expect(fakeCf.RunCFArgsForCall(5)).To(Equal(expected_logout_calls))
+			})
 
-			// Push and start app
-			expected_push_calls := []string{"push", "-p", "./fake_app_path", "-b", "fake_buildpack", "fake_app_name", "-d", "fake_domain", "--no-start"}
-			Expect(fakeCf.RunCFArgsForCall(3)).To(Equal(expected_push_calls))
-			expected_start_calls := []string{"start", "fake_app_name"}
-			Expect(fakeCf.RunCFArgsForCall(4)).To(Equal(expected_start_calls))
-			// call #5: stop the app will fail
+			It("Returns an error from CF", func() {
+				fakeCf.StubFailingCF("push")
+				_, err := sli.RunTest("fake_app_name", "fake_buildpack", "./fake_app_path", config)
 
-			// Cleanup and logout
-			expected_delete_calls := []string{"delete", "fake_app_name", "-f", "-r"}
-			Expect(fakeCf.RunCFArgsForCall(6)).To(Equal(expected_delete_calls))
-			expected_logout_calls := []string{"logout"}
-			Expect(fakeCf.RunCFArgsForCall(7)).To(Equal(expected_logout_calls))
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("Running CF command failed: push"))
+			})
 
-			Expect(result.StartTime).ToNot(Equal(time.Duration(0)))
-			Expect(result.StopTime).To(Equal(time.Duration(0)))
-			Expect(result.StartStatus).To(Equal(1))
-			Expect(result.StopStatus).To(Equal(0))
+			It("Does not record time and status", func() {
+				fakeCf.StubFailingCF("push")
+				result, _ := sli.RunTest("fake_app_name", "fake_buildpack", "./fake_app_path", config)
+
+				Expect(result.StartTime).To(Equal(time.Duration(0)))
+				Expect(result.StopTime).To(Equal(time.Duration(0)))
+				Expect(result.StartStatus).To(Equal(0))
+				Expect(result.StopStatus).To(Equal(0))
+			})
+		})
+
+		Context("When stop fails", func() {
+			It("Cleans up the app", func() {
+				fakeCf.StubFailingCF("stop")
+				sli.RunTest("fake_app_name", "fake_buildpack", "./fake_app_path", config)
+
+				expected_delete_calls := []string{"delete", "fake_app_name", "-f", "-r"}
+				Expect(fakeCf.RunCFArgsForCall(6)).To(Equal(expected_delete_calls))
+				expected_logout_calls := []string{"logout"}
+				Expect(fakeCf.RunCFArgsForCall(7)).To(Equal(expected_logout_calls))
+			})
+
+			It("Returns an error from CF", func() {
+				fakeCf.StubFailingCF("stop")
+				_, err := sli.RunTest("fake_app_name", "fake_buildpack", "./fake_app_path", config)
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("Running CF command failed: stop"))
+			})
+
+			It("Records time and status", func() {
+				fakeCf.StubFailingCF("stop")
+				result, err := sli.RunTest("fake_app_name", "fake_buildpack", "./fake_app_path", config)
+				Expect(err).To(HaveOccurred())
+
+				Expect(result.StartTime).ToNot(Equal(time.Duration(0)))
+				Expect(result.StopTime).To(Equal(time.Duration(0)))
+				Expect(result.StartStatus).To(Equal(1))
+				Expect(result.StopStatus).To(Equal(0))
+			})
 		})
 	})
 })

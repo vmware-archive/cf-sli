@@ -85,24 +85,24 @@ func (s SliExecutor) CleanupSli(app_name string) error {
 }
 
 func (s SliExecutor) RunTest(app_name string, app_buildpack string, path string, c config.Config) (*Result, error) {
-	err := s.Prepare(c.Api, c.User, c.Password, c.Org, c.Space)
+	defer s.CleanupSli(app_name)
 
+	err := s.Prepare(c.Api, c.User, c.Password, c.Org, c.Space)
 	if err != nil {
 		result := &Result{
 			StartStatus: 0,
 			StopStatus:  0,
 		}
-		return result, nil
+		return result, err
 	}
 
-	defer s.CleanupSli(app_name)
 	elapsed_start_time, err := s.PushAndStartSli(app_name, app_buildpack, c.Domain, path)
 	if err != nil {
 		result := &Result{
 			StartStatus: 0,
 			StopStatus:  0,
 		}
-		return result, nil
+		return result, err
 	}
 
 	elapsed_stop_time, err := s.StopSli(app_name)
@@ -112,7 +112,7 @@ func (s SliExecutor) RunTest(app_name string, app_buildpack string, path string,
 			StartStatus: 1,
 			StopStatus:  0,
 		}
-		return result, nil
+		return result, err
 	}
 
 	result := &Result{
