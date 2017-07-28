@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
 
@@ -23,6 +24,11 @@ func main() {
 	var config config.Config
 	var cf_cli cf_wrapper.CfWrapper
 
+	buildpack := flag.String("buildpack", "ruby_buildpack", "Buildpack to use for app push")
+	app_bits_path := flag.String("app-bits", "./assets/ruby_simple", "App bits path")
+
+	flag.Parse()
+
 	err := config.LoadConfig("./.config")
 	if err != nil {
 		fmt.Fprint(os.Stderr, "Failed to load .config :\n")
@@ -39,7 +45,7 @@ func main() {
 	app_name := "cf-sli-app-" + guid.String()[0:18]
 
 	sli_executor := sli_executor.NewSliExecutor(cf_cli)
-	result, err := sli_executor.RunTest(app_name, "ruby_buildpack", "./assets/ruby_simple", config)
+	result, err := sli_executor.RunTest(app_name, *buildpack, *app_bits_path, config)
 	if err != nil {
 		panic(err)
 	}
