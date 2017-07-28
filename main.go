@@ -36,7 +36,7 @@ func main() {
 		panic(err)
 	}
 
-	app_name := guid.String()[0:20]
+	app_name := "cf-sli-app-" + guid.String()[0:18]
 
 	sli_executor := sli_executor.NewSliExecutor(cf_cli)
 	result, err := sli_executor.RunTest(app_name, "ruby_buildpack", "./assets/ruby_simple", config)

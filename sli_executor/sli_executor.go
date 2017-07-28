@@ -102,6 +102,7 @@ func (s SliExecutor) RunTest(app_name string, app_buildpack string, path string,
 			StartStatus: 0,
 			StopStatus:  0,
 		}
+		s.printLogs(app_name)
 		return result, err
 	}
 
@@ -112,6 +113,7 @@ func (s SliExecutor) RunTest(app_name string, app_buildpack string, path string,
 			StartStatus: 1,
 			StopStatus:  0,
 		}
+		s.printLogs(app_name)
 		return result, err
 	}
 
@@ -122,4 +124,9 @@ func (s SliExecutor) RunTest(app_name string, app_buildpack string, path string,
 		StopStatus:  1,
 	}
 	return result, nil
+}
+
+func (s SliExecutor) printLogs(app_name string) {
+	s.cf("app", app_name, "--guid")
+	s.cf("logs", app_name, "--recent")
 }
