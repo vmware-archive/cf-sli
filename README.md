@@ -1,5 +1,9 @@
 # cf-sli
 
+Service Level Indicator monitors for [Pivotal Web Services](http://run.pivotal.io/)
+
+Calculates percentage of pushes successful over a period of time
+
 ## Prerequisites
 * Stable [CF CLI](https://github.com/cloudfoundry/cli/releases)
 * Config file (see sample below)
@@ -54,3 +58,5 @@ post_to_datadog "cloudops_tools.cf_sli.app_stop_time_in_sec" $currenttime $app_s
 post_to_datadog "cloudops_tools.cf_sli.app_start_status" $currenttime $app_start_status "deployment:${BOSH_DEPLOYMENT_NAME}"
 post_to_datadog "cloudops_tools.cf_sli.app_stop_status" $currenttime $app_stop_status "deployment:${BOSH_DEPLOYMENT_NAME}"
 ```
+
+_inspired by Google SRE's [Service Level Objectives](https://landing.google.com/sre/book/chapters/service-level-objectives.html)_
