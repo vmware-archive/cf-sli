@@ -46,9 +46,6 @@ func main() {
 
 	sli_executor := sli_executor.NewSliExecutor(cf_cli)
 	result, err := sli_executor.RunTest(app_name, *buildpack, *app_bits_path, config)
-	if err != nil {
-		fmt.Fprintf(os.Stdout, err.Error())
-	}
 
 	output := &Output{
 		Route:       app_name + "." + config.Domain,
