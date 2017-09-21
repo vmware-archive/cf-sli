@@ -19,6 +19,8 @@ cat > .config
   "org": "cf-sli",
   "space": "dev",
   "domain": "example.com"
+  "domain": "example.com",
+  "stack": "cflinuxfs2"
 }
 ```
 
