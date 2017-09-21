@@ -13,6 +13,7 @@ import (
 
 var _ = Describe("SliExecutor", func() {
 	var expected_api_calls = []string{"api", "fake_api"}
+	var expected_api_without_ssl_validation_calls = []string{"api", "fake_api", "--skip-ssl-validation"}
 	var expected_auth_calls = []string{"auth", "fake_user", "fake_pass"}
 	var expected_target_calls = []string{"target", "-o", "fake_org", "-s", "fake_space"}
 	var expected_push_calls = []string{"push", "-p", "./fake_path", "-b", "fake_buildpack", "fake_app_name", "-d", "fake_domain", "--no-start"}
@@ -35,7 +36,7 @@ var _ = Describe("SliExecutor", func() {
 
 	Context("#Prepare", func() {
 		It("returns nil if cf command executes successfully", func() {
-			err := sli.Prepare("fake_api", "fake_user", "fake_pass", "fake_org", "fake_space")
+			err := sli.Prepare("fake_api", "fake_user", "fake_pass", "fake_org", "fake_space", false)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeCf).To(HaveReceived("RunCF").With(expected_api_calls))
@@ -43,21 +44,30 @@ var _ = Describe("SliExecutor", func() {
 			Expect(fakeCf).To(HaveReceived("RunCF").With(expected_target_calls))
 		})
 
+		It("skips SSL validation on `cf api` if skipSslValidation is true", func() {
+			err := sli.Prepare("fake_api", "fake_user", "fake_pass", "fake_org", "fake_space", true)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeCf).To(HaveReceived("RunCF").With(expected_api_without_ssl_validation_calls))
+			Expect(fakeCf).To(HaveReceived("RunCF").With(expected_auth_calls))
+			Expect(fakeCf).To(HaveReceived("RunCF").With(expected_target_calls))
+		})
+
 		It("returns err when cf api fails", func() {
 			fakeCf.StubFailingCF("api")
-			err := sli.Prepare("fake_api", "fake_user", "fake_pass", "fake_org", "fake_space")
+			err := sli.Prepare("fake_api", "fake_user", "fake_pass", "fake_org", "fake_space", false)
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("returns err when cf auth fails", func() {
 			fakeCf.StubFailingCF("auth")
-			err := sli.Prepare("fake_api", "fake_user", "fake_pass", "fake_org", "fake_space")
+			err := sli.Prepare("fake_api", "fake_user", "fake_pass", "fake_org", "fake_space", false)
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("returns err when cf target fails", func() {
 			fakeCf.StubFailingCF("target")
-			err := sli.Prepare("fake_api", "fake_user", "fake_pass", "fake_org", "fake_space")
+			err := sli.Prepare("fake_api", "fake_user", "fake_pass", "fake_org", "fake_space", false)
 			Expect(err).To(HaveOccurred())
 		})
 	})
@@ -152,6 +162,19 @@ var _ = Describe("SliExecutor", func() {
 			// Cleanup and logout
 			Expect(fakeCf).To(HaveReceived("RunCF").With(expected_delete_calls))
 			Expect(fakeCf).To(HaveReceived("RunCF").With(expected_logout_calls))
+		})
+
+		Context("when skipSslValidation is true", func() {
+			BeforeEach(func() {
+				config.SkipSslValidation = true
+			})
+
+			It("skips SSL validation on `cf api`", func() {
+				_, err := sli.RunTest("fake_app_name", "fake_buildpack", "./fake_path", config)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(fakeCf).To(HaveReceived("RunCF").With(expected_api_without_ssl_validation_calls))
+			})
 		})
 
 		Context("When something in the prepare step fails", func() {

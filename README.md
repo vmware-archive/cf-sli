@@ -18,7 +18,8 @@ cat > .config
   "pass": "abc123",
   "org": "cf-sli",
   "space": "dev",
-  "domain": "example.com"
+  "domain": "example.com",
+  "skip_ssl_validation": false
 }
 ```
 

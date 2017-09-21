@@ -17,6 +17,7 @@ var _ = Describe("LoadConfig", func() {
 		Expect(c.Org).To(Equal("fake_org"))
 		Expect(c.Space).To(Equal("fake_space"))
 		Expect(c.Domain).To(Equal("fake_domain"))
+		Expect(c.SkipSslValidation).To(Equal(false))
 	})
 
 	It("returns an error reading a none-existing file", func() {
