@@ -12,6 +12,7 @@ type Config struct {
 	Domain   string `json:"domain"`
 	Org      string `json:"org"`
 	Space    string `json:"space"`
+	Stack    string `json:"stack"`
 }
 
 func (c *Config) LoadConfig(filename string) error {

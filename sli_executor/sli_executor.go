@@ -44,8 +44,12 @@ func (s SliExecutor) Prepare(api string, user string, password string, org strin
 	return nil
 }
 
-func (s SliExecutor) PushAndStartSli(app_name string, app_buildpack string, domain string, path string) (time.Duration, error) {
-	err := s.cf("push", "-p", path, "-b", app_buildpack, app_name, "-d", domain, "--no-start")
+func (s SliExecutor) PushAndStartSli(app_name string, app_buildpack string, domain string, path string, stack string) (time.Duration, error) {
+	cfPushArgs := []string{"push", "-p", path, "-b", app_buildpack, app_name, "-d", domain, "--no-start"}
+	if stack != "" {
+		cfPushArgs = append(cfPushArgs, "-s", stack)
+	}
+	err := s.cf(cfPushArgs...)
 	if err != nil {
 		return time.Duration(0), err
 	}
@@ -96,7 +100,7 @@ func (s SliExecutor) RunTest(app_name string, app_buildpack string, path string,
 		return result, err
 	}
 
-	elapsed_start_time, err := s.PushAndStartSli(app_name, app_buildpack, c.Domain, path)
+	elapsed_start_time, err := s.PushAndStartSli(app_name, app_buildpack, c.Domain, path, c.Stack)
 	if err != nil {
 		result := &Result{
 			StartStatus: 0,
