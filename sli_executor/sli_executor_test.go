@@ -63,14 +63,19 @@ var _ = Describe("SliExecutor", func() {
 	})
 
 	Context("#PushAndStartSli", func() {
-		// It("Push the Sli app with --no-start and starts it", func() {
-		// 	elapsedTime, err := sli.PushAndStartSli("fake_app_name", "fake_buildpack", "fake_domain", "./fake_path")
-		// 	Expect(err).NotTo(HaveOccurred())
-		// 	Expect(elapsedTime).ToNot(Equal(0))
+		FIt("Push the Sli app with --no-start and starts it", func() {
+			fakeCf.StubTimeoutCF("push")
+			fakeChannel := make(chan sli_executor.PushAndStartDuration)
+			go sli.PushAndStartSli("fake_app_name", "fake_buildpack", "fake_domain", "./fake_path", fakeChannel)
 
-		// 	Expect(fakeCf).To(HaveReceived("RunCF").With(expectedPushCalls))
-		// 	Expect(fakeCf).To(HaveReceived("RunCF").With(expectedStartCalls))
-		// })
+			// Expect(fakeCf).To(HaveReceived("RunCF").With(expectedPushCalls))
+			// Expect(fakeCf).To(HaveReceived("RunCF").With(expectedStartCalls))
+			fakeDuration := &sli_executor.PushAndStartDuration{
+				ElapsedTime: time.Duration(0),
+				Err:         nil,
+			}
+			Expect(<-fakeChannel).To(Equal(*fakeDuration))
+		})
 
 		// It("Returns error when cf push fails", func() {
 		// 	fakeCf.StubFailingCF("push")
@@ -155,13 +160,16 @@ var _ = Describe("SliExecutor", func() {
 			Expect(fakeCf).To(HaveReceived("RunCF").With(expectedLogoutCalls))
 		})
 
-		FIt("Returns error when cf push and start times out", func() {
-			fakeCf.StubTimeoutCF("push")
-			result, _ := sli.RunTest("fake_app_name", "fake_buildpack", "./fake_path", config)
-			Expect(result.StartTime).To(Equal(time.Duration(0)))
-			Expect(result.StopTime).To(Equal(time.Duration(0)))
-			Expect(result.StartStatus).To(Equal(3001))
-			Expect(result.StopStatus).To(Equal(3000))
+		Context("When the push and start goes over the timeout", func() {
+			It("Returns 0 for start status and X for start time", func() {
+				fakeCf.StubTimeoutCF("push")
+				result, _ := sli.RunTest("fake_app_name", "fake_buildpack", "./fake_path", config)
+
+				Expect(result.StartTime).To(Equal(time.Duration(0)))
+				Expect(result.StopTime).To(Equal(time.Duration(0)))
+				Expect(result.StartStatus).To(Equal(3000))
+				Expect(result.StopStatus).To(Equal(3000))
+			})
 		})
 
 		Context("When something in the prepare step fails", func() {
