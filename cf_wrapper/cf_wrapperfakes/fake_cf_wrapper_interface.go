@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/pivotal-cloudops/cf-sli/cf_wrapper"
 )
@@ -25,9 +26,21 @@ type FakeCfWrapperInterface struct {
 func (fake *FakeCfWrapperInterface) StubFailingCF(command string) {
 	fake.RunCFStub = func(commands ...string) error {
 		if commands[0] == command {
-			error_message := "Running CF command failed: "
-			error_message += strings.Join(commands, " ")
-			return errors.New(error_message)
+			errorMessage := "Running CF command failed: "
+			errorMessage += strings.Join(commands, " ")
+			return errors.New(errorMessage)
+		}
+		return nil
+	}
+}
+
+func (fake *FakeCfWrapperInterface) StubTimeoutCF(command string) {
+	fake.RunCFStub = func(commands ...string) error {
+		if commands[0] == command {
+			errorMessage := "Running CF command failed: "
+			errorMessage += strings.Join(commands, " ")
+			time.Sleep(5 * time.Second)
+			return errors.New(errorMessage)
 		}
 		return nil
 	}
