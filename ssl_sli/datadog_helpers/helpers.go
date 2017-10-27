@@ -17,12 +17,13 @@ type DatadogInfo struct {
 
 func PostToDatadog(result int, datadogInfo DatadogInfo) {
 	datadogURL := "https://app.datadoghq.com/api/v1/series?api_key=" + datadogInfo.DatadogAPIKey + "&application_key=" + datadogInfo.DatadogAppKey
+	currentTime := time.Now()
 
-	body := createPOSTBody(result, datadogInfo)
+	body := createPOSTBody(result, datadogInfo, currentTime)
 	req, _ := http.NewRequest("POST", datadogURL, body)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	fmt.Println("Posting to datadog: ", datadogInfo.Metric, result)
+	fmt.Println("Time: ", currentTime, "Posting to datadog: ", datadogInfo.Metric, result)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		fmt.Println("error posting to Datadog: ", err)
@@ -33,8 +34,8 @@ func PostToDatadog(result int, datadogInfo DatadogInfo) {
 	fmt.Println("Posted to datadog: ", resp.Status)
 }
 
-func createPOSTBody(result int, datadogInfo DatadogInfo) *strings.Reader {
-	currentTime := time.Now().Unix()
+func createPOSTBody(result int, datadogInfo DatadogInfo, currentTime time.Time) *strings.Reader {
+	epochTime := currentTime.Unix()
 	body := fmt.Sprintf(`
 		{ "series" :
          [
@@ -43,7 +44,7 @@ func createPOSTBody(result int, datadogInfo DatadogInfo) *strings.Reader {
 						"type":"gauge",
 						"tags":["sli","deployment:%s"]}
         ]
-		}`, datadogInfo.Metric, currentTime, result, datadogInfo.DeploymentName)
+		}`, datadogInfo.Metric, epochTime, result, datadogInfo.DeploymentName)
 
 	return strings.NewReader(body)
 }

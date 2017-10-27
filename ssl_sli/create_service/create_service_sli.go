@@ -21,23 +21,16 @@ func SLI(config config.Config, sliExecutor sli_executor.SliExecutor, datadogInfo
 		return errPrepare.Error()
 	}
 
-	guid, errorGuid := uuid.NewV4()
-	if errorGuid != nil {
-		panic(errorGuid)
-	}
-	serviceInstanceName := "ssl-sli-servInst-" + guid.String()[0:18]
-	var createStatus int
-	err := ""
-
 	fmt.Println("Creating SSL service instance")
-	errCreateService := sliExecutor.CreateService("ssl", "free", serviceInstanceName)
-	if errCreateService != nil {
-		createStatus = 0
-		err += errCreateService.Error()
-	} else {
-		createStatus = 1
+	guid := generateGuid()
+	serviceInstanceName := "ssl-sli-servInst-" + guid[0:18]
+
+	createStatus, err := performSLITask(serviceInstanceName, sliExecutor)
+	if err != "" {
+		fmt.Println("An error occured when executing the SLI: ", err)
 	}
 	fmt.Println("Create status:", createStatus, "for metric ", datadogInfo.Metric)
+
 	datadoghelpers.PostToDatadog(createStatus, datadogInfo)
 
 	fmt.Println("Cleaning up and deleting the SSL service instance")
@@ -47,6 +40,22 @@ func SLI(config config.Config, sliExecutor sli_executor.SliExecutor, datadogInfo
 	}
 
 	return err
+}
+
+func performSLITask(serviceInstanceName string, sliExecutor sli_executor.SliExecutor) (int, string) {
+	err := sliExecutor.CreateService("ssl", "free", serviceInstanceName)
+	if err != nil {
+		return 0, err.Error()
+	}
+	return 1, ""
+}
+
+func generateGuid() string {
+	guid, err := uuid.NewV4()
+	if err != nil {
+		panic(err)
+	}
+	return guid.String()
 }
 
 func CaptureStdout(f func()) string {
