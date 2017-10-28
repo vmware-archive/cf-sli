@@ -130,3 +130,31 @@ func (s SliExecutor) printLogs(app_name string) {
 	s.cf("app", app_name, "--guid")
 	s.cf("logs", app_name, "--recent")
 }
+
+func (s SliExecutor) CreateService(serviceName string, plan string, serviceInstanceName string) error {
+	err := s.cf("create-service", serviceName, plan, serviceInstanceName)
+	if err != nil {
+		return err
+	}
+
+	err = s.cf("service", serviceInstanceName)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s SliExecutor) CleanupService(serviceInstanceName string) error {
+	err := s.cf("delete-service", serviceInstanceName, "-f")
+	if err != nil {
+		return err
+	}
+
+	err = s.cf("logout")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

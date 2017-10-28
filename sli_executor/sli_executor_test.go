@@ -255,4 +255,50 @@ var _ = Describe("SliExecutor", func() {
 			})
 		})
 	})
+
+	Context("#CreateService", func() {
+		It("Creates the service", func() {
+			err := sli.CreateService("fakeServiceName", "fakePlan", "fakeServiceInstanceName")
+			Expect(err).NotTo(HaveOccurred())
+
+			expectedCreateServiceCalls := []string{"create-service", "fakeServiceName", "fakePlan", "fakeServiceInstanceName"}
+			Expect(fakeCf).To(HaveReceived("RunCF").With(expectedCreateServiceCalls))
+		})
+
+		It("Gets info of the service", func() {
+			err := sli.CreateService("fakeServiceName", "fakePlan", "fakeServiceInstanceName")
+			Expect(err).NotTo(HaveOccurred())
+
+			expectedServiceCalls := []string{"service", "fakeServiceInstanceName"}
+			Expect(fakeCf).To(HaveReceived("RunCF").With(expectedServiceCalls))
+		})
+
+		It("Returns error when cf create-service fails", func() {
+			fakeCf.StubFailingCF("create-service")
+			err := sli.CreateService("fakeServiceName", "fakePlan", "fakeServiceInstanceName")
+
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("Running CF command failed: create-service"))
+		})
+	})
+
+	Context("#CleanupService", func() {
+		It("Deletes the service and logs out", func() {
+			err := sli.CleanupService("fakeServiceInstanceName")
+			Expect(err).NotTo(HaveOccurred())
+
+			expectedDeleteServiceCalls := []string{"delete-service", "fakeServiceInstanceName", "-f"}
+			expectedLogoutCalls := []string{"logout"}
+			Expect(fakeCf).To(HaveReceived("RunCF").With(expectedDeleteServiceCalls))
+			Expect(fakeCf).To(HaveReceived("RunCF").With(expectedLogoutCalls))
+		})
+
+		It("Returns error when cf delete-service fails", func() {
+			fakeCf.StubFailingCF("delete-service")
+			err := sli.CleanupService("fakeServiceInstanceName")
+
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("Running CF command failed: delete-service"))
+		})
+	})
 })

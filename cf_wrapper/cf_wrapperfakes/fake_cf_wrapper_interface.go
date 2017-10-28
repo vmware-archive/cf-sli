@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/pivotal-cloudops/cf-sli/cf_wrapper"
 )
@@ -31,6 +32,10 @@ func (fake *FakeCfWrapperInterface) StubFailingCF(command string) {
 		}
 		return nil
 	}
+}
+
+func (fake *FakeCfWrapperInterface) StubTimeoutCF(command string) {
+	time.Sleep(5 * time.Second)
 }
 
 func (fake *FakeCfWrapperInterface) RunCF(commands ...string) error {
