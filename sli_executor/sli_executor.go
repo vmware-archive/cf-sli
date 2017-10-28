@@ -28,8 +28,12 @@ func (s SliExecutor) cf(commands ...string) error {
 	return s.Cf_wrapper.RunCF(commands...)
 }
 
-func (s SliExecutor) Prepare(api string, user string, password string, org string, space string) error {
-	err := s.cf("api", api)
+func (s SliExecutor) Prepare(api string, user string, password string, org string, space string, skipSslValidation bool) error {
+	cfApiArgs := []string{"api", api}
+	if skipSslValidation {
+		cfApiArgs = append(cfApiArgs, "--skip-ssl-validation")
+	}
+	err := s.cf(cfApiArgs...)
 	if err != nil {
 		return err
 	}
@@ -87,7 +91,7 @@ func (s SliExecutor) CleanupSli(app_name string) error {
 func (s SliExecutor) RunTest(app_name string, app_buildpack string, path string, c config.Config) (*Result, error) {
 	defer s.CleanupSli(app_name)
 
-	err := s.Prepare(c.Api, c.User, c.Password, c.Org, c.Space)
+	err := s.Prepare(c.Api, c.User, c.Password, c.Org, c.Space, c.SkipSslValidation)
 	if err != nil {
 		result := &Result{
 			StartStatus: 0,
