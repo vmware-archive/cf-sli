@@ -2,6 +2,7 @@ package datadoghelpers
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -15,7 +16,7 @@ type DatadogInfo struct {
 	Metric         string
 }
 
-func PostToDatadog(result int, datadogInfo DatadogInfo) {
+func PostToDatadog(result int, datadogInfo DatadogInfo) string {
 	datadogURL := "https://app.datadoghq.com/api/v1/series?api_key=" + datadogInfo.DatadogAPIKey + "&application_key=" + datadogInfo.DatadogAppKey
 	currentTime := time.Now()
 
@@ -23,7 +24,7 @@ func PostToDatadog(result int, datadogInfo DatadogInfo) {
 	req, _ := http.NewRequest("POST", datadogURL, body)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	fmt.Println("Time: ", currentTime, "Posting to datadog: ", datadogInfo.Metric, result)
+	log.Println("Time: ", currentTime, "Posting to datadog: ", datadogInfo.Metric, result)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		fmt.Println("error posting to Datadog: ", err)
@@ -31,7 +32,7 @@ func PostToDatadog(result int, datadogInfo DatadogInfo) {
 	}
 
 	defer resp.Body.Close()
-	fmt.Println("Posted to datadog: ", resp.Status)
+	return resp.Status
 }
 
 func createPOSTBody(result int, datadogInfo DatadogInfo, currentTime time.Time) *strings.Reader {

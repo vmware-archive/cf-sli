@@ -2,8 +2,7 @@ package createservice
 
 import (
 	"bytes"
-	"fmt"
-	"io"
+	"log"
 	"os"
 
 	uuid "github.com/nu7hatch/gouuid"
@@ -13,41 +12,58 @@ import (
 )
 
 func SLI(config config.Config, sliExecutor sli_executor.SliExecutor, datadogInfo datadoghelpers.DatadogInfo) string {
-	fmt.Println("Logging in and targetting space")
-	errPrepare := sliExecutor.Prepare(config.Api, config.User, config.Password, config.Org, config.Space)
-	if errPrepare != nil {
-		fmt.Fprintln(os.Stderr, "There was an error preparing the SLI tool:", errPrepare.Error())
-		fmt.Fprintln(os.Stderr, "Exiting and skipping post to Datadog")
-		return errPrepare.Error()
+	err := setup(config, sliExecutor)
+	if err != nil {
+		log.Println("Exiting and skipping post to Datadog")
+		return err.Error()
 	}
 
-	fmt.Println("Creating SSL service instance")
+	log.Println("Creating SSL service instance")
 	guid := generateGuid()
 	serviceInstanceName := "ssl-sli-servInst-" + guid[0:18]
 
-	createStatus, err := performSLITask(serviceInstanceName, sliExecutor)
-	if err != "" {
-		fmt.Println("An error occured when executing the SLI: ", err)
+	createStatus := 1
+	errSLI := ""
+	err = sliExecutor.CreateService("ssl", "free", serviceInstanceName)
+	if err != nil {
+		log.Println("An error occurred when executing the SLI: ", err)
+		createStatus = 0
+		errSLI = err.Error()
 	}
-	fmt.Println("Create status:", createStatus, "for metric ", datadogInfo.Metric)
+	log.Println("Create status:", createStatus, "for metric ", datadogInfo.Metric)
 
-	datadoghelpers.PostToDatadog(createStatus, datadogInfo)
-
-	fmt.Println("Cleaning up and deleting the SSL service instance")
-	errCleanupService := sliExecutor.CleanupService(serviceInstanceName)
-	if errCleanupService != nil {
-		err += errCleanupService.Error()
+	respStatus := datadoghelpers.PostToDatadog(createStatus, datadogInfo)
+	if respStatus != "200" {
+		log.Println("An error occurred when posting to Datadog, response status: ", respStatus)
+		errSLI += "Error reporting to Datadog"
 	}
 
-	return err
+	err = cleanup(serviceInstanceName, sliExecutor)
+	if err != nil {
+		log.Println("An error occurred when cleaning up service instance: ", err)
+		errSLI += err.Error()
+	}
+
+	return errSLI
 }
 
-func performSLITask(serviceInstanceName string, sliExecutor sli_executor.SliExecutor) (int, string) {
-	err := sliExecutor.CreateService("ssl", "free", serviceInstanceName)
+func setup(config config.Config, sliExecutor sli_executor.SliExecutor) error {
+	log.Println("Logging in and targetting space")
+	err := sliExecutor.Prepare(config.Api, config.User, config.Password, config.Org, config.Space)
 	if err != nil {
-		return 0, err.Error()
+		log.Println("There was an error preparing the SLI tool:", err.Error())
+		return err
 	}
-	return 1, ""
+	return nil
+}
+
+func cleanup(serviceInstanceName string, sliExecutor sli_executor.SliExecutor) error {
+	log.Println("Cleaning up and deleting the SSL service instance")
+	err := sliExecutor.CleanupService(serviceInstanceName)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func generateGuid() string {
@@ -58,17 +74,14 @@ func generateGuid() string {
 	return guid.String()
 }
 
-func CaptureStdout(f func()) string {
-	old := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
+func CaptureLog(f func()) string {
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+	defer func() {
+		log.SetOutput(os.Stdout)
+	}()
 
 	f()
 
-	w.Close()
-	os.Stdout = old
-
-	var buf bytes.Buffer
-	io.Copy(&buf, r)
 	return buf.String()
 }
