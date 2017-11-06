@@ -12,10 +12,11 @@ import (
 )
 
 var _ = Describe("SliExecutor", func() {
+	var expected_timeout = "60"
 	var expected_api_calls = []string{"api", "fake_api"}
 	var expected_auth_calls = []string{"auth", "fake_user", "fake_pass"}
 	var expected_target_calls = []string{"target", "-o", "fake_org", "-s", "fake_space"}
-	var expected_push_calls = []string{"push", "-p", "./fake_path", "-b", "fake_buildpack", "fake_app_name", "-d", "fake_domain", "--no-start"}
+	var expected_push_calls = []string{"push", "-p", "./fake_path", "-b", "fake_buildpack", "fake_app_name", "-d", "fake_domain", "--no-start", "-t", expected_timeout}
 	var expected_start_calls = []string{"start", "fake_app_name"}
 	var expected_stop_calls = []string{"stop", "fake_app_name"}
 	var expected_delete_calls = []string{"delete", "fake_app_name", "-f", "-r"}
@@ -64,7 +65,7 @@ var _ = Describe("SliExecutor", func() {
 
 	Context("#PushAndStartSli", func() {
 		It("Push the Sli app with --no-start and starts it", func() {
-			elapsed_time, err := sli.PushAndStartSli("fake_app_name", "fake_buildpack", "fake_domain", "./fake_path")
+			elapsed_time, err := sli.PushAndStartSli("fake_app_name", "fake_buildpack", "fake_domain", "./fake_path", "60")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(elapsed_time).ToNot(Equal(0))
 
@@ -74,14 +75,14 @@ var _ = Describe("SliExecutor", func() {
 
 		It("Returns error when cf push fails", func() {
 			fakeCf.StubFailingCF("push")
-			elapsed_time, err := sli.PushAndStartSli("fake_app_name", "fake_buildpack", "fake_domain", "./fake_path")
+			elapsed_time, err := sli.PushAndStartSli("fake_app_name", "fake_buildpack", "fake_domain", "./fake_path", "60")
 			Expect(err).To(HaveOccurred())
 			Expect(elapsed_time).To(Equal(time.Duration(0)))
 		})
 
 		It("Returns error when cf start fails", func() {
 			fakeCf.StubFailingCF("start")
-			elapsed_time, err := sli.PushAndStartSli("fake_app_name", "fake_buildpack", "fake_domain", "./fake_path")
+			elapsed_time, err := sli.PushAndStartSli("fake_app_name", "fake_buildpack", "fake_domain", "./fake_path", "60")
 			Expect(err).To(HaveOccurred())
 			Expect(elapsed_time).To(Equal(time.Duration(0)))
 		})
