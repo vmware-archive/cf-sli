@@ -17,7 +17,9 @@ var _ = Describe("LoadConfig", func() {
 		Expect(c.Org).To(Equal("fake_org"))
 		Expect(c.Space).To(Equal("fake_space"))
 		Expect(c.Domain).To(Equal("fake_domain"))
-		Expect(c.Timeout).To(Equal(1))
+		Expect(c.Timeout.Staging).To(Equal(2))
+		Expect(c.Timeout.Startup).To(Equal(1))
+		Expect(c.Timeout.FirstHealthyResponse).To(Equal(60))
 	})
 
 	It("returns an error reading a none-existing file", func() {

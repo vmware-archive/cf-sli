@@ -5,11 +5,14 @@ import (
 
 	"github.com/pivotal-cloudops/cf-sli/cf_wrapper"
 	"github.com/pivotal-cloudops/cf-sli/config"
+	"github.com/pivotal-cloudops/cf-sli/logger"
 	"strconv"
+	"os"
 )
 
 type SliExecutor struct {
 	Cf_wrapper cf_wrapper.CfWrapperInterface
+	logger logger.Logger
 }
 
 type Result struct {
@@ -19,9 +22,10 @@ type Result struct {
 	StopStatus  int
 }
 
-func NewSliExecutor(cf_wrapper cf_wrapper.CfWrapperInterface) SliExecutor {
+func NewSliExecutor(cf_wrapper cf_wrapper.CfWrapperInterface, logger logger.Logger) SliExecutor {
 	return SliExecutor{
 		Cf_wrapper: cf_wrapper,
+		logger: logger,
 	}
 }
 
@@ -45,8 +49,14 @@ func (s SliExecutor) Prepare(api string, user string, password string, org strin
 	return nil
 }
 
-func (s SliExecutor) PushAndStartSli(app_name string, app_buildpack string, domain string, path string, timeout string) (time.Duration, error) {
-	err := s.cf("push", "-p", path, "-b", app_buildpack, app_name, "-d", domain, "--no-start", "-t", timeout)
+func (s SliExecutor) PushAndStartSli(app_name string, app_buildpack string, domain string, path string, timeouts config.TimeoutConfig) (time.Duration, error) {
+
+	s.logger.Printf("PUSH_TIMEOUTS: %+v", timeouts)
+
+	os.Setenv("CF_STAGING_TIMEOUT", strconv.Itoa(timeouts.Staging))
+	os.Setenv("CF_STARTUP_TIMEOUT", strconv.Itoa(timeouts.Startup))
+
+	err := s.cf("push", "-p", path, "-b", app_buildpack, app_name, "-d", domain, "--no-start", "-t", strconv.Itoa(timeouts.FirstHealthyResponse))
 	if err != nil {
 		return time.Duration(0), err
 	}
@@ -85,10 +95,10 @@ func (s SliExecutor) CleanupSli(app_name string) error {
 	return nil
 }
 
-func (s SliExecutor) RunTest(app_name string, app_buildpack string, path string, c config.Config) (*Result, error) {
+func (s SliExecutor) RunTest(app_name string, app_buildpack string, path string, config config.Config) (*Result, error) {
 	defer s.CleanupSli(app_name)
 
-	err := s.Prepare(c.Api, c.User, c.Password, c.Org, c.Space)
+	err := s.Prepare(config.Api, config.User, config.Password, config.Org, config.Space)
 	if err != nil {
 		result := &Result{
 			StartStatus: 0,
@@ -97,9 +107,7 @@ func (s SliExecutor) RunTest(app_name string, app_buildpack string, path string,
 		return result, err
 	}
 
-	timeout := strconv.Itoa(c.Timeout * 60)
-
-	elapsed_start_time, err := s.PushAndStartSli(app_name, app_buildpack, c.Domain, path, timeout)
+	elapsedStartTime, err := s.PushAndStartSli(app_name, app_buildpack, config.Domain, path, config.Timeout)
 	if err != nil {
 		result := &Result{
 			StartStatus: 0,
@@ -109,10 +117,10 @@ func (s SliExecutor) RunTest(app_name string, app_buildpack string, path string,
 		return result, err
 	}
 
-	elapsed_stop_time, err := s.StopSli(app_name)
+	elapsedStopTime, err := s.StopSli(app_name)
 	if err != nil {
 		result := &Result{
-			StartTime:   elapsed_start_time,
+			StartTime:   elapsedStartTime,
 			StartStatus: 1,
 			StopStatus:  0,
 		}
@@ -121,8 +129,8 @@ func (s SliExecutor) RunTest(app_name string, app_buildpack string, path string,
 	}
 
 	result := &Result{
-		StartTime:   elapsed_start_time,
-		StopTime:    elapsed_stop_time,
+		StartTime:   elapsedStartTime,
+		StopTime:    elapsedStopTime,
 		StartStatus: 1,
 		StopStatus:  1,
 	}

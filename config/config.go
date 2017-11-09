@@ -12,7 +12,13 @@ type Config struct {
 	Domain   string `json:"domain"`
 	Org      string `json:"org"`
 	Space    string `json:"space"`
-	Timeout  int `json:"timeout"`
+	Timeout  TimeoutConfig `json:"timeout"`
+}
+
+type TimeoutConfig struct {
+	Staging int `json:"staging"` // minutes
+	Startup int `json:"startup"` // minutes
+	FirstHealthyResponse int `json:"firstHealthyResponse"` // seconds
 }
 
 func (c *Config) LoadConfig(filename string) error {

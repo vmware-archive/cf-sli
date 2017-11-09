@@ -10,6 +10,7 @@ import (
 	"github.com/pivotal-cloudops/cf-sli/cf_wrapper"
 	"github.com/pivotal-cloudops/cf-sli/config"
 	"github.com/pivotal-cloudops/cf-sli/sli_executor"
+	"github.com/pivotal-cloudops/cf-sli/logger"
 )
 
 type Output struct {
@@ -44,7 +45,7 @@ func main() {
 
 	app_name := "cf-sli-app-" + guid.String()[0:18]
 
-	sli_executor := sli_executor.NewSliExecutor(cf_cli)
+	sli_executor := sli_executor.NewSliExecutor(cf_cli, logger.NewLogger())
 	result, err := sli_executor.RunTest(app_name, *buildpack, *app_bits_path, config)
 
 	output := &Output{

@@ -13,12 +13,14 @@ import (
 	"github.com/pivotal-cloudops/cf-sli/sli_executor"
 	"github.com/pivotal-cloudops/cf-sli/ssl_sli/create_service"
 	datadoghelpers "github.com/pivotal-cloudops/cf-sli/ssl_sli/datadog_helpers"
+	"github.com/pivotal-cloudops/cf-sli/logger/loggerfakes"
 )
 
 var _ = Describe("CreateService", func() {
 
 	var (
 		fakeCf      *cf_wrapperfakes.FakeCfWrapperInterface
+		fakeLogger *loggerfakes.FakeLogger
 		sliExecutor sli_executor.SliExecutor
 		config      config.Config
 		datadogInfo datadoghelpers.DatadogInfo
@@ -26,7 +28,8 @@ var _ = Describe("CreateService", func() {
 
 	BeforeEach(func() {
 		fakeCf = new(cf_wrapperfakes.FakeCfWrapperInterface)
-		sliExecutor = sli_executor.NewSliExecutor(fakeCf)
+		fakeLogger = new(loggerfakes.FakeLogger)
+		sliExecutor = sli_executor.NewSliExecutor(fakeCf, fakeLogger)
 		config.LoadConfig("../../fixtures/config_test.json")
 		datadogInfo = datadoghelpers.DatadogInfo{
 			DatadogAPIKey:  "fakeKey",

@@ -5,5 +5,9 @@
   "org": "fake_org",
   "domain": "fake_domain",
   "space": "fake_space",
-  "timeout": 1
+  "timeout":  {
+    "staging": 2,
+    "startup": 1,
+    "firstHealthyResponse": 60
+  }
 }
