@@ -3,16 +3,18 @@ package sli_executor
 import (
 	"time"
 
+	"strconv"
+
+	"os"
+
 	"github.com/pivotal-cloudops/cf-sli/cf_wrapper"
 	"github.com/pivotal-cloudops/cf-sli/config"
 	"github.com/pivotal-cloudops/cf-sli/logger"
-	"strconv"
-	"os"
 )
 
 type SliExecutor struct {
 	Cf_wrapper cf_wrapper.CfWrapperInterface
-	logger logger.Logger
+	logger     logger.Logger
 }
 
 type Result struct {
@@ -25,7 +27,7 @@ type Result struct {
 func NewSliExecutor(cf_wrapper cf_wrapper.CfWrapperInterface, logger logger.Logger) SliExecutor {
 	return SliExecutor{
 		Cf_wrapper: cf_wrapper,
-		logger: logger,
+		logger:     logger,
 	}
 }
 
@@ -49,14 +51,14 @@ func (s SliExecutor) Prepare(api string, user string, password string, org strin
 	return nil
 }
 
-func (s SliExecutor) PushAndStartSli(app_name string, app_buildpack string, domain string, path string, timeouts config.TimeoutConfig) (time.Duration, error) {
+func (s SliExecutor) PushAndStartSli(app_name string, app_buildpack string, domain string, path string, stack string, timeouts config.TimeoutConfig) (time.Duration, error) {
 
 	s.logger.Printf("PUSH_TIMEOUTS: %+v", timeouts)
 
 	os.Setenv("CF_STAGING_TIMEOUT", strconv.Itoa(timeouts.Staging))
 	os.Setenv("CF_STARTUP_TIMEOUT", strconv.Itoa(timeouts.Startup))
 
-	err := s.cf("push", "-p", path, "-b", app_buildpack, app_name, "-d", domain, "--no-start", "-t", strconv.Itoa(timeouts.FirstHealthyResponse))
+	err := s.cf("push", "-p", path, "-b", app_buildpack, app_name, "-d", domain, "--no-start", "-s", stack, "-t", strconv.Itoa(timeouts.FirstHealthyResponse))
 	if err != nil {
 		return time.Duration(0), err
 	}
@@ -95,7 +97,7 @@ func (s SliExecutor) CleanupSli(app_name string) error {
 	return nil
 }
 
-func (s SliExecutor) RunTest(app_name string, app_buildpack string, path string, config config.Config) (*Result, error) {
+func (s SliExecutor) RunTest(app_name string, app_buildpack string, path string, stack string, config config.Config) (*Result, error) {
 	defer s.CleanupSli(app_name)
 
 	err := s.Prepare(config.Api, config.User, config.Password, config.Org, config.Space)
@@ -107,7 +109,7 @@ func (s SliExecutor) RunTest(app_name string, app_buildpack string, path string,
 		return result, err
 	}
 
-	elapsedStartTime, err := s.PushAndStartSli(app_name, app_buildpack, config.Domain, path, config.Timeout)
+	elapsedStartTime, err := s.PushAndStartSli(app_name, app_buildpack, config.Domain, path, stack, config.Timeout)
 	if err != nil {
 		result := &Result{
 			StartStatus: 0,

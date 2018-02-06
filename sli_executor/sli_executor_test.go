@@ -3,14 +3,15 @@ package sli_executor_test
 import (
 	"time"
 
+	"os"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cloudops/cf-sli/cf_wrapper/cf_wrapperfakes"
 	"github.com/pivotal-cloudops/cf-sli/config"
+	"github.com/pivotal-cloudops/cf-sli/logger/loggerfakes"
 	"github.com/pivotal-cloudops/cf-sli/sli_executor"
 	. "github.com/tjarratt/gcounterfeiter"
-	"github.com/pivotal-cloudops/cf-sli/logger/loggerfakes"
-	"os"
 )
 
 var _ = Describe("SliExecutor", func() {
@@ -18,23 +19,23 @@ var _ = Describe("SliExecutor", func() {
 	var expected_api_calls = []string{"api", "fake_api"}
 	var expected_auth_calls = []string{"auth", "fake_user", "fake_pass"}
 	var expected_target_calls = []string{"target", "-o", "fake_org", "-s", "fake_space"}
-	var expected_push_calls = []string{"push", "-p", "./fake_path", "-b", "fake_buildpack", "fake_app_name", "-d", "fake_domain", "--no-start", "-t", expected_timeout}
+	var expected_push_calls = []string{"push", "-p", "./fake_path", "-b", "fake_buildpack", "fake_app_name", "-d", "fake_domain", "--no-start", "-s", "fake-stack", "-t", expected_timeout}
 	var expected_start_calls = []string{"start", "fake_app_name"}
 	var expected_stop_calls = []string{"stop", "fake_app_name"}
 	var expected_delete_calls = []string{"delete", "fake_app_name", "-f", "-r"}
 	var expected_logout_calls = []string{"logout"}
 	var expected_logs_calls = []string{"logs", "fake_app_name", "--recent"}
-	var expectedPushTimeouts = config.TimeoutConfig {
-		Staging: 1,
-		Startup: 1,
+	var expectedPushTimeouts = config.TimeoutConfig{
+		Staging:              1,
+		Startup:              1,
 		FirstHealthyResponse: 60,
 	}
 
 	var (
-		fakeCf *cf_wrapperfakes.FakeCfWrapperInterface
+		fakeCf     *cf_wrapperfakes.FakeCfWrapperInterface
 		fakeLogger *loggerfakes.FakeLogger
-		sli    sli_executor.SliExecutor
-		config config.Config
+		sli        sli_executor.SliExecutor
+		config     config.Config
 	)
 
 	BeforeEach(func() {
@@ -74,9 +75,8 @@ var _ = Describe("SliExecutor", func() {
 	})
 
 	Context("#PushAndStartSli", func() {
-
 		It("logs the configured push timeouts", func() {
-			_, err := sli.PushAndStartSli("fake_app_name", "fake_buildpack", "fake_domain", "./fake_path", expectedPushTimeouts)
+			_, err := sli.PushAndStartSli("fake_app_name", "fake_buildpack", "fake_domain", "./fake_path", "fake-stack", expectedPushTimeouts)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeLogger.PrintfCallCount()).ToNot(BeZero())
 			_, printfArgs := fakeLogger.PrintfArgsForCall(0)
@@ -85,15 +85,15 @@ var _ = Describe("SliExecutor", func() {
 		})
 
 		It("sets the staging and startup timeouts as environment variables", func() {
-			_, err := sli.PushAndStartSli("fake_app_name", "fake_buildpack", "fake_domain", "./fake_path", expectedPushTimeouts)
+			_, err := sli.PushAndStartSli("fake_app_name", "fake_buildpack", "fake_domain", "./fake_path", "fake-stack", expectedPushTimeouts)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(os.Getenv("CF_STAGING_TIMEOUT")).To(Equal("1"))
 			Expect(os.Getenv("CF_STARTUP_TIMEOUT")).To(Equal("1"))
 		})
 
-		It("Push the Sli app with --no-start, -t and starts it", func() {
-			elapsed_time, err := sli.PushAndStartSli("fake_app_name", "fake_buildpack", "fake_domain", "./fake_path", expectedPushTimeouts)
+		It("Push the Sli app with --no-start and starts it", func() {
+			elapsed_time, err := sli.PushAndStartSli("fake_app_name", "fake_buildpack", "fake_domain", "./fake_path", "fake-stack", expectedPushTimeouts)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(elapsed_time).ToNot(Equal(0))
 
@@ -103,14 +103,14 @@ var _ = Describe("SliExecutor", func() {
 
 		It("Returns error when cf push fails", func() {
 			fakeCf.StubFailingCF("push")
-			elapsed_time, err := sli.PushAndStartSli("fake_app_name", "fake_buildpack", "fake_domain", "./fake_path", expectedPushTimeouts)
+			elapsed_time, err := sli.PushAndStartSli("fake_app_name", "fake_buildpack", "fake_domain", "./fake_path", "fake-stack", expectedPushTimeouts)
 			Expect(err).To(HaveOccurred())
 			Expect(elapsed_time).To(Equal(time.Duration(0)))
 		})
 
 		It("Returns error when cf start fails", func() {
 			fakeCf.StubFailingCF("start")
-			elapsed_time, err := sli.PushAndStartSli("fake_app_name", "fake_buildpack", "fake_domain", "./fake_path", expectedPushTimeouts)
+			elapsed_time, err := sli.PushAndStartSli("fake_app_name", "fake_buildpack", "fake_domain", "./fake_path", "fake-stack", expectedPushTimeouts)
 			Expect(err).To(HaveOccurred())
 			Expect(elapsed_time).To(Equal(time.Duration(0)))
 		})
@@ -160,7 +160,7 @@ var _ = Describe("SliExecutor", func() {
 
 	Context("#RunTest", func() {
 		It("Login, push the app, returns the start and stop times and status, and cleanup", func() {
-			result, err := sli.RunTest("fake_app_name", "fake_buildpack", "./fake_path", config)
+			result, err := sli.RunTest("fake_app_name", "fake_buildpack", "./fake_path", "fake-stack", config)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Login and target to the org and space
@@ -186,7 +186,7 @@ var _ = Describe("SliExecutor", func() {
 		Context("When something in the prepare step fails", func() {
 			It("Cleans up the app", func() {
 				fakeCf.StubFailingCF("api")
-				sli.RunTest("fake_app_name", "fake_buildpack", "./fake_path", config)
+				sli.RunTest("fake_app_name", "fake_buildpack", "./fake_path", "fake-stack", config)
 
 				expected_delete_calls := []string{"delete", "fake_app_name", "-f", "-r"}
 				Expect(fakeCf).To(HaveReceived("RunCF").With(expected_delete_calls))
@@ -196,7 +196,7 @@ var _ = Describe("SliExecutor", func() {
 
 			It("Returns an error from CF", func() {
 				fakeCf.StubFailingCF("auth")
-				_, err := sli.RunTest("fake_app_name", "fake_buildpack", "./fake_path", config)
+				_, err := sli.RunTest("fake_app_name", "fake_buildpack", "./fake_path", "fake-stack", config)
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("Running CF command failed:"))
@@ -204,7 +204,7 @@ var _ = Describe("SliExecutor", func() {
 
 			It("Does not record time and status", func() {
 				fakeCf.StubFailingCF("target")
-				result, _ := sli.RunTest("fake_app_name", "fake_buildpack", "./fake_path", config)
+				result, _ := sli.RunTest("fake_app_name", "fake_buildpack", "./fake_path", "fake-stack", config)
 
 				Expect(result.StartTime).To(Equal(time.Duration(0)))
 				Expect(result.StopTime).To(Equal(time.Duration(0)))
@@ -216,14 +216,14 @@ var _ = Describe("SliExecutor", func() {
 		Context("When push/start fails", func() {
 			It("Calls CF logs", func() {
 				fakeCf.StubFailingCF("push")
-				sli.RunTest("fake_app_name", "fake_buildpack", "./fake_path", config)
+				sli.RunTest("fake_app_name", "fake_buildpack", "./fake_path", "fake-stack", config)
 
 				Expect(fakeCf).To(HaveReceived("RunCF").With(expected_logs_calls))
 			})
 
 			It("Cleans up the app", func() {
 				fakeCf.StubFailingCF("push")
-				sli.RunTest("fake_app_name", "fake_buildpack", "./fake_path", config)
+				sli.RunTest("fake_app_name", "fake_buildpack", "./fake_path", "fake-stack", config)
 
 				Expect(fakeCf).To(HaveReceived("RunCF").With(expected_delete_calls))
 				Expect(fakeCf).To(HaveReceived("RunCF").With(expected_logout_calls))
@@ -231,7 +231,7 @@ var _ = Describe("SliExecutor", func() {
 
 			It("Returns an error from CF", func() {
 				fakeCf.StubFailingCF("push")
-				_, err := sli.RunTest("fake_app_name", "fake_buildpack", "./fake_path", config)
+				_, err := sli.RunTest("fake_app_name", "fake_buildpack", "./fake_path", "fake-stack", config)
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("Running CF command failed: push"))
@@ -239,7 +239,7 @@ var _ = Describe("SliExecutor", func() {
 
 			It("Does not record time and status", func() {
 				fakeCf.StubFailingCF("push")
-				result, _ := sli.RunTest("fake_app_name", "fake_buildpack", "./fake_path", config)
+				result, _ := sli.RunTest("fake_app_name", "fake_buildpack", "./fake_path", "fake-stack", config)
 
 				Expect(result.StartTime).To(Equal(time.Duration(0)))
 				Expect(result.StopTime).To(Equal(time.Duration(0)))
@@ -251,14 +251,14 @@ var _ = Describe("SliExecutor", func() {
 		Context("When stop fails", func() {
 			It("Calls CF logs", func() {
 				fakeCf.StubFailingCF("stop")
-				sli.RunTest("fake_app_name", "fake_buildpack", "./fake_path", config)
+				sli.RunTest("fake_app_name", "fake_buildpack", "./fake_path", "fake-stack", config)
 
 				Expect(fakeCf).To(HaveReceived("RunCF").With(expected_logs_calls))
 			})
 
 			It("Cleans up the app", func() {
 				fakeCf.StubFailingCF("stop")
-				sli.RunTest("fake_app_name", "fake_buildpack", "./fake_path", config)
+				sli.RunTest("fake_app_name", "fake_buildpack", "./fake_path", "fake-stack", config)
 
 				Expect(fakeCf).To(HaveReceived("RunCF").With(expected_delete_calls))
 				Expect(fakeCf).To(HaveReceived("RunCF").With(expected_logout_calls))
@@ -266,7 +266,7 @@ var _ = Describe("SliExecutor", func() {
 
 			It("Returns an error from CF", func() {
 				fakeCf.StubFailingCF("stop")
-				_, err := sli.RunTest("fake_app_name", "fake_buildpack", "./fake_path", config)
+				_, err := sli.RunTest("fake_app_name", "fake_buildpack", "./fake_path", "fake-stack", config)
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("Running CF command failed: stop"))
@@ -274,7 +274,7 @@ var _ = Describe("SliExecutor", func() {
 
 			It("Records time and status", func() {
 				fakeCf.StubFailingCF("stop")
-				result, err := sli.RunTest("fake_app_name", "fake_buildpack", "./fake_path", config)
+				result, err := sli.RunTest("fake_app_name", "fake_buildpack", "./fake_path", "fake-stack", config)
 				Expect(err).To(HaveOccurred())
 
 				Expect(result.StartTime).ToNot(Equal(time.Duration(0)))

@@ -9,8 +9,8 @@ import (
 	uuid "github.com/nu7hatch/gouuid"
 	"github.com/pivotal-cloudops/cf-sli/cf_wrapper"
 	"github.com/pivotal-cloudops/cf-sli/config"
-	"github.com/pivotal-cloudops/cf-sli/sli_executor"
 	"github.com/pivotal-cloudops/cf-sli/logger"
+	"github.com/pivotal-cloudops/cf-sli/sli_executor"
 )
 
 type Output struct {
@@ -27,6 +27,7 @@ func main() {
 
 	buildpack := flag.String("buildpack", "ruby_buildpack", "Buildpack to use for app push")
 	app_bits_path := flag.String("app-bits", "./assets/ruby_simple", "App bits path")
+	stack := flag.String("s", "cflinuxfs2", "Stack to use for app")
 
 	flag.Parse()
 
@@ -46,7 +47,7 @@ func main() {
 	app_name := "cf-sli-app-" + guid.String()[0:18]
 
 	sli_executor := sli_executor.NewSliExecutor(cf_cli, logger.NewLogger())
-	result, err := sli_executor.RunTest(app_name, *buildpack, *app_bits_path, config)
+	result, err := sli_executor.RunTest(app_name, *buildpack, *app_bits_path, *stack, config)
 
 	output := &Output{
 		Route:       app_name + "." + config.Domain,
