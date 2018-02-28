@@ -1,0 +1,10 @@
+---
+applications:
+- name: my-app
+  memory: 200M
+  instances: 1
+  buildpack: java_buildpack
+  stack: cflinuxfs2
+  env:
+    JAVA_OPTS: -XX:ReservedCodeCacheSize=10M -Xss1M
+    JBP_CONFIG_OPEN_JDK_JRE: "{ memory_calculator: { stack_threads: 2 } }"

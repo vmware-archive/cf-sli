@@ -25,10 +25,7 @@ func main() {
 	var config config.Config
 	var cf_cli cf_wrapper.CfWrapper
 
-	buildpack := flag.String("buildpack", "ruby_buildpack", "Buildpack to use for app push")
 	app_bits_path := flag.String("app-bits", "./assets/ruby_simple", "App bits path")
-	stack := flag.String("s", "cflinuxfs2", "Stack to use for app")
-	memory := flag.String("m", "1G", "Memory allocation for app")
 
 	flag.Parse()
 
@@ -48,7 +45,7 @@ func main() {
 	app_name := "cf-sli-app-" + guid.String()[0:18]
 
 	sli_executor := sli_executor.NewSliExecutor(cf_cli, logger.NewLogger())
-	result, err := sli_executor.RunTest(app_name, *buildpack, *memory, *app_bits_path, *stack, config)
+	result, err := sli_executor.RunTest(app_name, *app_bits_path, config)
 
 	output := &Output{
 		Route:       app_name + "." + config.Domain,
