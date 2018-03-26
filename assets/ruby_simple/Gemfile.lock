@@ -1,8 +1,8 @@
 GEM
   remote: https://rubygems.org/
   specs:
-    rack (1.5.5)
-    rack-protection (1.5.4)
+    rack (1.6.9)
+    rack-protection (1.5.5)
       rack
     sinatra (1.4.8)
       rack (~> 1.5)
@@ -14,7 +14,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  rack (~> 1.5.4)
+  rack (~> 1.6.9)
   sinatra
 
 BUNDLED WITH
