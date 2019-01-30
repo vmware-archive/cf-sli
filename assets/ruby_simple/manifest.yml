@@ -4,4 +4,3 @@ applications:
   memory: 32M
   instances: 1
   buildpack: ruby_buildpack
-  stack: cflinuxfs2
