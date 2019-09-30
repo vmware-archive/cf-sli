@@ -4,4 +4,4 @@ applications:
   memory: 256M
   instances: 1
   buildpack: hwc_buildpack
-  stack: windows2016
+  stack: windows
