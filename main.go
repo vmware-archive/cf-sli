@@ -26,10 +26,11 @@ func main() {
 	var cf_cli cf_wrapper.CfWrapper
 
 	app_bits_path := flag.String("app-bits", "./assets/ruby_simple", "App bits path")
+	configLocation := flag.String("config", "./config", "Config path")
 
 	flag.Parse()
 
-	err := config.LoadConfig("./.config")
+	err := config.LoadConfig(*configLocation)
 	if err != nil {
 		fmt.Fprint(os.Stderr, "Failed to load .config :\n")
 		fmt.Fprint(os.Stderr, err)
