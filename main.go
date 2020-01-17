@@ -26,7 +26,7 @@ func main() {
 	var cf_cli cf_wrapper.CfWrapper
 
 	app_bits_path := flag.String("app-bits", "./assets/ruby_simple", "App bits path")
-	configLocation := flag.String("config", "./config", "Config path")
+	configLocation := flag.String("config", "./.config", "Config path")
 
 	flag.Parse()
 
