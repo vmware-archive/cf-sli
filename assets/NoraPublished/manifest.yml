@@ -3,5 +3,5 @@ applications:
 - name: my-app
   memory: 256M
   instances: 1
-  buildpack: hwc_buildpack
+  buildpacks: [hwc_buildpack]
   stack: windows

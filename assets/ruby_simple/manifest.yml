@@ -3,4 +3,4 @@ applications:
 - name: my-app
   memory: 32M
   instances: 1
-  buildpack: ruby_buildpack
+  buildpacks: [ruby_buildpack]
