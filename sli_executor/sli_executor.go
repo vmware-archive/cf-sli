@@ -51,7 +51,7 @@ func (s SliExecutor) Prepare(api string, user string, password string, org strin
 	return nil
 }
 
-func (s SliExecutor) PushAndStartSli(app_name string, domain string, path string, timeouts config.TimeoutConfig) (time.Duration, error) {
+func (s SliExecutor) PushAndStartSli(app_name string, path string, timeouts config.TimeoutConfig) (time.Duration, error) {
 
 	s.logger.Printf("PUSH_TIMEOUTS: %+v", timeouts)
 
@@ -60,7 +60,7 @@ func (s SliExecutor) PushAndStartSli(app_name string, domain string, path string
 
 	manifest := strings.Join([]string{path, "/manifest.yml"}, "")
 
-	err := s.cf("push", "-p", path, app_name, "-f", manifest, "-d", domain, "--no-start", "-t", strconv.Itoa(timeouts.FirstHealthyResponse))
+	err := s.cf("push", "-p", path, app_name, "-f", manifest, "--no-start", "-t", strconv.Itoa(timeouts.FirstHealthyResponse))
 	if err != nil {
 		return time.Duration(0), err
 	}
@@ -111,7 +111,7 @@ func (s SliExecutor) RunTest(app_name string, path string, config config.Config)
 		return result, err
 	}
 
-	elapsedStartTime, err := s.PushAndStartSli(app_name, config.Domain, path, config.Timeout)
+	elapsedStartTime, err := s.PushAndStartSli(app_name, path, config.Timeout)
 	if err != nil {
 		result := &Result{
 			StartStatus: 0,

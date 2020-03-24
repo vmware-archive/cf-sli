@@ -9,7 +9,6 @@ type Config struct {
 	Api      string `json:"api"`
 	User     string `json:"user"`
 	Password string `json:"pass"`
-	Domain   string `json:"domain"`
 	Org      string `json:"org"`
 	Space    string `json:"space"`
 	Timeout  TimeoutConfig `json:"timeout"`

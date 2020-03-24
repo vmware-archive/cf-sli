@@ -14,7 +14,6 @@ import (
 )
 
 type Output struct {
-	Route       string  `json:"app_route"`
 	StartTime   float64 `json:"app_start_time_in_sec"`
 	StopTime    float64 `json:"app_stop_time_in_sec"`
 	StartStatus int     `json:"app_start_status"`
@@ -49,7 +48,6 @@ func main() {
 	result, err := sli_executor.RunTest(app_name, *app_bits_path, config)
 
 	output := &Output{
-		Route:       app_name + "." + config.Domain,
 		StartTime:   result.StartTime.Seconds(),
 		StopTime:    result.StopTime.Seconds(),
 		StartStatus: result.StartStatus,

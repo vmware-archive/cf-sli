@@ -16,7 +16,6 @@ var _ = Describe("LoadConfig", func() {
 		Expect(c.Password).To(Equal("fake_pass"))
 		Expect(c.Org).To(Equal("fake_org"))
 		Expect(c.Space).To(Equal("fake_space"))
-		Expect(c.Domain).To(Equal("fake_domain"))
 		Expect(c.Timeout.Staging).To(Equal(2))
 		Expect(c.Timeout.Startup).To(Equal(1))
 		Expect(c.Timeout.FirstHealthyResponse).To(Equal(60))
