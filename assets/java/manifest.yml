@@ -1,7 +1,7 @@
 ---
 applications:
 - name: my-app
-  memory: 200M
+  memory: 256M
   instances: 1
   buildpacks: [java_buildpack]
   env:
