@@ -1,6 +1,7 @@
 package sli_executor
 
 import (
+	"github.com/pivotal-cloudops/cf-sli/http_wrapper"
 	"time"
 
 	"os"
@@ -13,8 +14,9 @@ import (
 )
 
 type SliExecutor struct {
-	Cf_wrapper cf_wrapper.CfWrapperInterface
-	logger     logger.Logger
+	Cf_wrapper   cf_wrapper.CfWrapperInterface
+	logger       logger.Logger
+	http_wrapper http_wrapper.HttpWrapperInterface
 }
 
 type Result struct {
@@ -24,10 +26,12 @@ type Result struct {
 	StopStatus  int
 }
 
-func NewSliExecutor(cf_wrapper cf_wrapper.CfWrapperInterface, logger logger.Logger) SliExecutor {
+func NewSliExecutor(cf_wrapper cf_wrapper.CfWrapperInterface,
+					http_wrapper http_wrapper.HttpWrapperInterface, logger logger.Logger) SliExecutor {
 	return SliExecutor{
 		Cf_wrapper: cf_wrapper,
 		logger:     logger,
+		http_wrapper: http_wrapper,
 	}
 }
 
@@ -75,6 +79,17 @@ func (s SliExecutor) PushAndStartSli(app_name string, path string, timeouts conf
 	return time_elapsed, nil
 }
 
+
+func (s SliExecutor) GetRoute(app_name string, config config.Config) (string) {
+    return "https://" + app_name + "." + config.AppsDomain
+}
+
+func (s SliExecutor) CheckRoute(app_name string, config config.Config) (error) {
+	route := s.GetRoute(app_name, config)
+	_, err := s.http_wrapper.Get(route)
+	return err
+}
+
 func (s SliExecutor) StopSli(app_name string) (time.Duration, error) {
 	start := time.Now()
 	err := s.cf("stop", app_name)
@@ -120,6 +135,8 @@ func (s SliExecutor) RunTest(app_name string, path string, config config.Config)
 		s.printLogs(app_name)
 		return result, err
 	}
+
+	s.CheckRoute(app_name, config)
 
 	elapsedStopTime, err := s.StopSli(app_name)
 	if err != nil {

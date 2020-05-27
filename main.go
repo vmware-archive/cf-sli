@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/pivotal-cloudops/cf-sli/http_wrapper"
 	"os"
 
 	uuid "github.com/nu7hatch/gouuid"
@@ -23,6 +24,7 @@ type Output struct {
 func main() {
 	var config config.Config
 	var cf_cli cf_wrapper.CfWrapper
+	http_wrapper := &http_wrapper.HttpWrapper{}
 
 	app_bits_path := flag.String("app-bits", "./assets/ruby_simple", "App bits path")
 	configLocation := flag.String("config", "./.config", "Config path")
@@ -44,7 +46,7 @@ func main() {
 
 	app_name := "cf-sli-app-" + guid.String()[0:18]
 
-	sli_executor := sli_executor.NewSliExecutor(cf_cli, logger.NewLogger())
+	sli_executor := sli_executor.NewSliExecutor(cf_cli, http_wrapper, logger.NewLogger())
 	result, err := sli_executor.RunTest(app_name, *app_bits_path, config)
 
 	output := &Output{

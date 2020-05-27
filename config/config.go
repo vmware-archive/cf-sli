@@ -7,6 +7,7 @@ import (
 
 type Config struct {
 	Api      string `json:"api"`
+	AppsDomain string `json:"apps_domain"`
 	User     string `json:"user"`
 	Password string `json:"pass"`
 	Org      string `json:"org"`
@@ -31,5 +32,11 @@ func (c *Config) LoadConfig(filename string) error {
 	if err != nil {
 		return err
 	}
+
+	// defaults
+	if c.AppsDomain == "" {
+	    c.AppsDomain = "cfapps.com"
+	}
+
 	return nil
 }

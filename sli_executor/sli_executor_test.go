@@ -1,7 +1,10 @@
 package sli_executor_test
 
 import (
+	"github.com/pivotal-cloudops/cf-sli/http_wrapper"
+	"github.com/pivotal-cloudops/cf-sli/http_wrapper/http_wrapperfakes"
 	"time"
+	"errors"
 
 	"os"
 
@@ -13,6 +16,7 @@ import (
 	"github.com/pivotal-cloudops/cf-sli/sli_executor"
 	. "github.com/tjarratt/gcounterfeiter"
 )
+
 
 var _ = Describe("SliExecutor", func() {
 	var expected_timeout = "60"
@@ -35,14 +39,19 @@ var _ = Describe("SliExecutor", func() {
 		fakeCf     *cf_wrapperfakes.FakeCfWrapperInterface
 		fakeLogger *loggerfakes.FakeLogger
 		sli        sli_executor.SliExecutor
-		config     config.Config
+		sliConfig     config.Config
+		fakeHttpWrapperInterface http_wrapper.HttpWrapperInterface
+		fakeHttpWrapper *http_wrapperfakes.FakeHttpWrapper
 	)
 
 	BeforeEach(func() {
 		fakeCf = new(cf_wrapperfakes.FakeCfWrapperInterface)
 		fakeLogger = new(loggerfakes.FakeLogger)
-		sli = sli_executor.NewSliExecutor(fakeCf, fakeLogger)
-		config.LoadConfig("../fixtures/config_test.json")
+
+		fakeHttpWrapper = &http_wrapperfakes.FakeHttpWrapper{ Err: nil }
+		fakeHttpWrapperInterface = fakeHttpWrapper
+		sli = sli_executor.NewSliExecutor(fakeCf, fakeHttpWrapperInterface, fakeLogger)
+		sliConfig.LoadConfig("../fixtures/config_test.json")
 	})
 
 	Context("#Prepare", func() {
@@ -116,6 +125,42 @@ var _ = Describe("SliExecutor", func() {
 		})
 	})
 
+	Context("#GetRoute", func() {
+	    It("get a route by adding app name to app domain", func() {
+	        Expect(sli.GetRoute("foo", sliConfig)).To(Equal("https://foo.cfapps.com"))
+	    })
+	    It("Uses a custom domain", func() {
+	        customDomainConfig := config.Config{}
+	        err := customDomainConfig.LoadConfig("../fixtures/config_test.json")
+	        Expect(err).NotTo(HaveOccurred())
+            customDomainConfig.AppsDomain = "mydomain.com"
+	        Expect(sli.GetRoute("foo", customDomainConfig)).To(Equal("https://foo.mydomain.com"))
+	    })
+	})
+
+	Context("#CheckRoute", func() {
+		It("is routable", func() {
+			fakeHttpWrapperSuccess := &http_wrapperfakes.FakeHttpWrapper{
+				Err: nil,
+			}
+			routeCheckSli := sli_executor.NewSliExecutor(fakeCf, fakeHttpWrapperSuccess, fakeLogger)
+
+			err := routeCheckSli.CheckRoute("fake_app_name", sliConfig)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(fakeHttpWrapperSuccess.Url).To(Equal("https://fake_app_name.cfapps.com"))
+		})
+
+		It("is not routable", func() {
+			fakeHttpWrapperFailing := &http_wrapperfakes.FakeHttpWrapper{Err: errors.New(`Get "http://fake_app_name.cfapps.com": dial tcp: lookup fake_app_name.cfapps.com: no such host`)}
+			routeCheckSli := sli_executor.NewSliExecutor(fakeCf, fakeHttpWrapperFailing, fakeLogger)
+
+			err := routeCheckSli.CheckRoute("fake_app_name", sliConfig)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal(`Get "http://fake_app_name.cfapps.com": dial tcp: lookup fake_app_name.cfapps.com: no such host`))
+		})
+	})
+
 	Context("#StopSli", func() {
 		It("Start the Sli app", func() {
 			elapsed_time, err := sli.StopSli("fake_app_name")
@@ -160,7 +205,7 @@ var _ = Describe("SliExecutor", func() {
 
 	Context("#RunTest", func() {
 		It("Login, push the app, returns the start and stop times and status, and cleanup", func() {
-			result, err := sli.RunTest("fake_app_name", "./fake_path", config)
+			result, err := sli.RunTest("fake_app_name", "./fake_path", sliConfig)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Login and target to the org and space
@@ -168,9 +213,14 @@ var _ = Describe("SliExecutor", func() {
 			Expect(fakeCf).To(HaveReceived("RunCF").With(expected_auth_calls))
 			Expect(fakeCf).To(HaveReceived("RunCF").With(expected_target_calls))
 
-			// Push, start, and stop the app
+			// Push, start
 			Expect(fakeCf).To(HaveReceived("RunCF").With(expected_push_calls))
 			Expect(fakeCf).To(HaveReceived("RunCF").With(expected_start_calls))
+
+			// checkroute
+			Expect(fakeHttpWrapper.Url).To(Equal("https://fake_app_name.cfapps.com"))
+
+			// stop the app
 			Expect(fakeCf).To(HaveReceived("RunCF").With(expected_stop_calls))
 
 			Expect(result.StartTime).ToNot(Equal(0))
@@ -186,7 +236,7 @@ var _ = Describe("SliExecutor", func() {
 		Context("When something in the prepare step fails", func() {
 			It("Cleans up the app", func() {
 				fakeCf.StubFailingCF("api")
-				sli.RunTest("fake_app_name", "./fake_path", config)
+				sli.RunTest("fake_app_name", "./fake_path", sliConfig)
 
 				expected_delete_calls := []string{"delete", "fake_app_name", "-f", "-r"}
 				Expect(fakeCf).To(HaveReceived("RunCF").With(expected_delete_calls))
@@ -196,7 +246,7 @@ var _ = Describe("SliExecutor", func() {
 
 			It("Returns an error from CF", func() {
 				fakeCf.StubFailingCF("auth")
-				_, err := sli.RunTest("fake_app_name", "./fake_path", config)
+				_, err := sli.RunTest("fake_app_name", "./fake_path", sliConfig)
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("Running CF command failed:"))
@@ -204,7 +254,7 @@ var _ = Describe("SliExecutor", func() {
 
 			It("Does not record time and status", func() {
 				fakeCf.StubFailingCF("target")
-				result, _ := sli.RunTest("fake_app_name", "./fake_path", config)
+				result, _ := sli.RunTest("fake_app_name", "./fake_path", sliConfig)
 
 				Expect(result.StartTime).To(Equal(time.Duration(0)))
 				Expect(result.StopTime).To(Equal(time.Duration(0)))
@@ -216,14 +266,14 @@ var _ = Describe("SliExecutor", func() {
 		Context("When push/start fails", func() {
 			It("Calls CF logs", func() {
 				fakeCf.StubFailingCF("push")
-				sli.RunTest("fake_app_name", "./fake_path", config)
+				sli.RunTest("fake_app_name", "./fake_path", sliConfig)
 
 				Expect(fakeCf).To(HaveReceived("RunCF").With(expected_logs_calls))
 			})
 
 			It("Cleans up the app", func() {
 				fakeCf.StubFailingCF("push")
-				sli.RunTest("fake_app_name", "./fake_path", config)
+				sli.RunTest("fake_app_name", "./fake_path", sliConfig)
 
 				Expect(fakeCf).To(HaveReceived("RunCF").With(expected_delete_calls))
 				Expect(fakeCf).To(HaveReceived("RunCF").With(expected_logout_calls))
@@ -231,7 +281,7 @@ var _ = Describe("SliExecutor", func() {
 
 			It("Returns an error from CF", func() {
 				fakeCf.StubFailingCF("push")
-				_, err := sli.RunTest("fake_app_name", "./fake_path", config)
+				_, err := sli.RunTest("fake_app_name", "./fake_path", sliConfig)
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("Running CF command failed: push"))
@@ -239,7 +289,7 @@ var _ = Describe("SliExecutor", func() {
 
 			It("Does not record time and status", func() {
 				fakeCf.StubFailingCF("push")
-				result, _ := sli.RunTest("fake_app_name", "./fake_path", config)
+				result, _ := sli.RunTest("fake_app_name", "./fake_path", sliConfig)
 
 				Expect(result.StartTime).To(Equal(time.Duration(0)))
 				Expect(result.StopTime).To(Equal(time.Duration(0)))
@@ -251,14 +301,14 @@ var _ = Describe("SliExecutor", func() {
 		Context("When stop fails", func() {
 			It("Calls CF logs", func() {
 				fakeCf.StubFailingCF("stop")
-				sli.RunTest("fake_app_name", "./fake_path", config)
+				sli.RunTest("fake_app_name", "./fake_path", sliConfig)
 
 				Expect(fakeCf).To(HaveReceived("RunCF").With(expected_logs_calls))
 			})
 
 			It("Cleans up the app", func() {
 				fakeCf.StubFailingCF("stop")
-				sli.RunTest("fake_app_name", "./fake_path", config)
+				sli.RunTest("fake_app_name", "./fake_path", sliConfig)
 
 				Expect(fakeCf).To(HaveReceived("RunCF").With(expected_delete_calls))
 				Expect(fakeCf).To(HaveReceived("RunCF").With(expected_logout_calls))
@@ -266,7 +316,7 @@ var _ = Describe("SliExecutor", func() {
 
 			It("Returns an error from CF", func() {
 				fakeCf.StubFailingCF("stop")
-				_, err := sli.RunTest("fake_app_name", "./fake_path", config)
+				_, err := sli.RunTest("fake_app_name", "./fake_path", sliConfig)
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("Running CF command failed: stop"))
@@ -274,7 +324,7 @@ var _ = Describe("SliExecutor", func() {
 
 			It("Records time and status", func() {
 				fakeCf.StubFailingCF("stop")
-				result, err := sli.RunTest("fake_app_name", "./fake_path", config)
+				result, err := sli.RunTest("fake_app_name", "./fake_path", sliConfig)
 				Expect(err).To(HaveOccurred())
 
 				Expect(result.StartTime).ToNot(Equal(time.Duration(0)))
